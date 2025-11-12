@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum QuestStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum QuestDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  LEGENDARY
+}
+
+enum QuestFrequency {
+  ONCE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// ── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  role      UserRole @default(USER)
+  xp        Int      @default(0)
+  level     Int      @default(1)
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  categories Category[]
+  quests     Quest[]
+  entries    QuestEntry[]
+
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#6366f1")
+  icon        String?
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quests Quest[]
+
+  @@unique([name, userId])
+  @@index([userId])
+  @@map("categories")
+}
+
+model Quest {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  status      QuestStatus     @default(ACTIVE)
+  difficulty  QuestDifficulty @default(MEDIUM)
+  frequency   QuestFrequency  @default(DAILY)
+  xpReward    Int             @default(10) @map("xp_reward")
+  dueDate     DateTime?       @map("due_date")
+  completedAt DateTime?       @map("completed_at")
+  userId      String          @map("user_id")
+  categoryId  String?         @map("category_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  entries  QuestEntry[]
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([userId, status])
+  @@index([dueDate])
+  @@map("quests")
+}
+
+model QuestEntry {
+  id          String   @id @default(cuid())
+  questId     String   @map("quest_id")
+  userId      String   @map("user_id")
+  xpEarned    Int      @map("xp_earned")
+  note        String?
+  completedAt DateTime @default(now()) @map("completed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([questId])
+  @@index([questId, completedAt])
+  @@index([userId, completedAt(sort: Desc)])
+  @@map("quest_entries")
+}
