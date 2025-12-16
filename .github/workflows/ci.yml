@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ── Backend ───────────────────────────────────────────────────────────────
+  backend:
+    name: Backend (lint · typecheck · test)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: questlog
+          POSTGRES_PASSWORD: questlog
+          POSTGRES_DB: questlog_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U questlog -d questlog_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://questlog:questlog@localhost:5432/questlog_test
+      JWT_SECRET: ci-test-secret-that-is-at-least-32-characters-long
+      NODE_ENV: test
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:5173
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install all workspace dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Run migrations
+        working-directory: backend
+        run: npx prisma migrate deploy
+
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: Test (with coverage)
+        working-directory: backend
+        run: npm test -- --coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 7
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend (lint · typecheck · test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install all workspace dependencies
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
+  # ── Shared ────────────────────────────────────────────────────────────────
+  shared:
+    name: Shared (typecheck)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install all workspace dependencies
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: shared
+        run: npm run typecheck
