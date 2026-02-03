@@ -201,7 +201,7 @@ export function QuestForm({ initial, onSuccess, onCancel }: QuestFormProps) {
           <label className="flex items-center justify-between rounded-lg border border-surface-700 bg-surface-800 px-4 py-3 cursor-pointer">
             <div>
               <p className="text-sm font-medium text-surface-100">Active</p>
-              <p className="text-xs text-surface-400">Paused quests don't appear in your daily list</p>
+              <p className="text-xs text-surface-400">Paused quests don&apos;t appear in your daily list</p>
             </div>
             <button
               type="button"

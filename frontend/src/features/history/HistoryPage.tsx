@@ -180,7 +180,7 @@ export default function HistoryPage() {
           )}
           {!feedQuery.hasNextPage && (
             <p className="text-center text-xs text-surface-600 py-4">
-              That's everything.
+              That&apos;s everything.
             </p>
           )}
         </div>

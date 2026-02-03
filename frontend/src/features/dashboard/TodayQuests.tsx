@@ -27,7 +27,7 @@ export function TodayQuests({ quests }: TodayQuestsProps) {
   return (
     <Card>
       <div className="mb-4 flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold text-surface-50">Today's quests</h2>
+        <h2 className="text-lg font-semibold text-surface-50">Today&apos;s quests</h2>
         <Link to="/quests" className="text-xs text-primary-400 hover:text-primary-300">
           See all →
         </Link>
