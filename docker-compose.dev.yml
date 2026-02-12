@@ -22,7 +22,16 @@ services:
   backend:
     image: node:20-alpine
     working_dir: /app
-    command: sh -c "npm install && npx prisma migrate deploy && npm run dev"
+    # Mount the full monorepo so npm workspaces (@questlog/shared) resolve.
+    # node_modules lives in a named volume so host's macOS binaries don't leak in.
+    command: >
+      sh -c "
+      apk add --no-cache openssl &&
+      npm install &&
+      npx prisma generate --schema backend/prisma/schema.prisma &&
+      npx prisma migrate deploy --schema backend/prisma/schema.prisma &&
+      npm run dev -w @questlog/backend
+      "
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://questlog:questlog@db:5432/questlog
@@ -31,10 +40,16 @@ services:
       NODE_ENV: development
       CORS_ORIGIN: http://localhost:5173
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - .:/app
+      - backend_node_modules:/app/node_modules
     ports:
       - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3001/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 90s
     depends_on:
       db:
         condition: service_healthy
@@ -42,17 +57,24 @@ services:
   frontend:
     image: node:20-alpine
     working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: >
+      sh -c "
+      npm install &&
+      npm run dev -w @questlog/frontend -- --host 0.0.0.0
+      "
     restart: unless-stopped
     environment:
       VITE_API_URL: http://localhost:3001
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - .:/app
+      - frontend_node_modules:/app/node_modules
     ports:
       - "5173:5173"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data_dev:
+  backend_node_modules:
+  frontend_node_modules:
