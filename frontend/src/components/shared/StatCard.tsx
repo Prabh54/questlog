@@ -8,6 +8,7 @@ interface StatCardProps {
   subtitle?: string;
   icon?: LucideIcon;
   tone?: 'default' | 'primary' | 'success' | 'warning' | 'xp';
+  iconClassName?: string;
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export function StatCard({
   subtitle,
   icon: Icon,
   tone = 'default',
+  iconClassName,
   className,
 }: StatCardProps) {
   return (
@@ -35,7 +37,7 @@ export function StatCard({
         {subtitle && <p className="mt-0.5 text-xs text-surface-500 truncate">{subtitle}</p>}
       </div>
       {Icon && (
-        <div className={cn('shrink-0 rounded-lg bg-surface-800 p-2', TONE_RING[tone])}>
+        <div className={cn('shrink-0 rounded-lg bg-surface-800 p-2', iconClassName ?? TONE_RING[tone])}>
           <Icon className="h-5 w-5" />
         </div>
       )}

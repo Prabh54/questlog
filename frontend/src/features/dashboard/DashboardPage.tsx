@@ -54,6 +54,8 @@ export default function DashboardPage() {
           value={summary?.totalXp ?? '—'}
           icon={Zap}
           tone="xp"
+          className="border-t-2 border-yellow-500/60"
+          iconClassName="text-yellow-500/40"
         />
         <StatCard
           label="Level"
@@ -61,6 +63,8 @@ export default function DashboardPage() {
           subtitle={summary ? `${summary.xpToNext} XP to next` : undefined}
           icon={Activity}
           tone="primary"
+          className="border-t-2 border-purple-500/60"
+          iconClassName="text-purple-500/40"
         />
         <StatCard
           label="Today"
@@ -68,11 +72,15 @@ export default function DashboardPage() {
           subtitle={summary ? 'of daily quests done' : undefined}
           icon={Target}
           tone="success"
+          className="border-t-2 border-emerald-500/60"
+          iconClassName="text-emerald-500/40"
         />
         <StatCard
           label="Active quests"
           value={summary?.activeQuestCount ?? '—'}
           icon={Swords}
+          className="border-t-2 border-blue-500/60"
+          iconClassName="text-blue-500/40"
         />
         <StatCard
           label="Best streak"
@@ -80,6 +88,8 @@ export default function DashboardPage() {
           subtitle={summary && summary.bestStreak > 0 ? 'days in a row' : undefined}
           icon={Flame}
           tone="warning"
+          className="border-t-2 border-orange-500/60"
+          iconClassName="text-orange-500/40"
         />
       </div>
 
