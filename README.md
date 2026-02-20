@@ -5,7 +5,7 @@ A gamified habit tracker. Turn daily routines into quests, earn XP, level up, bu
 **Live demo:** https://questlog-web.fly.dev
 **API:** https://questlog-api-snowy-seastar-7669.fly.dev
 
-<video src="docs/demo.mp4" controls muted playsinline width="800"></video>
+https://github.com/user-attachments/assets/9e326a3e-7f24-4c81-96be-22ceffa285be
 
 ---
 
