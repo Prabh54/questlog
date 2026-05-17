@@ -2,7 +2,7 @@
 
 A gamified habit tracker. Turn daily routines into quests, earn XP, level up, build streaks, and watch a year-long consistency heatmap fill in.
 
-**Live demo:** https://questlog-web.fly.dev
+**Live demo:** https://questlog-web.fly.dev  ·  log in with `demo@questlog.app` / `questdemo123`
 **API:** https://questlog-api-snowy-seastar-7669.fly.dev
 
 https://github.com/user-attachments/assets/9e326a3e-7f24-4c81-96be-22ceffa285be
