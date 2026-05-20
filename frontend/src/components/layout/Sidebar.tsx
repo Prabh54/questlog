@@ -2,7 +2,6 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Swords,
-  Tag,
   User,
   LogOut,
   Zap,
@@ -18,7 +17,6 @@ const NAV_ITEMS = [
   { to: '/quests', icon: Swords, label: 'Quests' },
   { to: '/history', icon: History, label: 'History' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/categories', icon: Tag, label: 'Categories' },
   { to: '/profile', icon: User, label: 'Profile' },
 ] as const;
 
