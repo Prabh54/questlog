@@ -1,0 +1,51 @@
+name: Create profile activity issues
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open issues for contribution activity
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = [
+              {
+                title: 'Polish mobile dashboard spacing',
+                body: 'Improve stat card and heatmap layout on small screens.\n\n- [ ] Audit breakpoints\n- [ ] Fix overflow on iPhone widths',
+              },
+              {
+                title: 'Add quest export to CSV',
+                body: 'Allow users to export completed quests and XP history from the profile page.',
+              },
+              {
+                title: 'Improve demo account onboarding copy',
+                body: 'Clarify demo credentials and first-login hints on the login and landing pages.',
+              },
+            ];
+
+            for (const issue of issues) {
+              const existing = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'all',
+                per_page: 100,
+              });
+              if (existing.data.some((i) => i.title === issue.title)) {
+                core.info(`Skipping duplicate: ${issue.title}`);
+                continue;
+              }
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issue.title,
+                body: issue.body,
+                labels: ['enhancement'],
+              });
+              core.info(`Created: ${issue.title}`);
+            }
