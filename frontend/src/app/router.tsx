@@ -18,7 +18,6 @@ const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
 const QuestsPage = lazy(() => import('../pages/protected/QuestsPage'));
 const QuestDetailPage = lazy(() => import('../pages/protected/QuestDetailPage'));
 const QuestFormPage = lazy(() => import('../pages/protected/QuestFormPage'));
-const CategoriesPage = lazy(() => import('../pages/protected/CategoriesPage'));
 const ProfilePage = lazy(() => import('../features/profile/ProfilePage'));
 const HistoryPage = lazy(() => import('../features/history/HistoryPage'));
 const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage'));
@@ -102,14 +101,6 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoader />}>
                 <QuestFormPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: '/categories',
-            element: (
-              <Suspense fallback={<PageLoader />}>
-                <CategoriesPage />
               </Suspense>
             ),
           },
