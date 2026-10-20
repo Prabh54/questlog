@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { QuestCard } from '../../features/quests/QuestCard';
 import { QuestFilters } from '../../features/quests/QuestFilters';
+import { useAuth } from '../../features/auth/useAuth';
 import {
   categoriesApi,
   questsApi,
@@ -20,6 +21,7 @@ function hasActiveFilters(f: QuestFiltersQuery): boolean {
 
 export default function QuestsPage() {
   const qc = useQueryClient();
+  const { refreshUser } = useAuth();
   const [filters, setFilters] = useState<QuestFiltersQuery>({ sort: 'newest' });
 
   const questsQuery = useQuery({
@@ -46,6 +48,7 @@ export default function QuestsPage() {
       qc.invalidateQueries({ queryKey: ['quests'] });
       qc.invalidateQueries({ queryKey: ['entries'] });
       qc.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      refreshUser().catch(() => {});
     },
   });
 

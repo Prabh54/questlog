@@ -1,12 +1,20 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { AppError, Errors } from '../lib/errors';
 import { encodeCursor, decodeCursor } from '../utils/cursor';
-import { todayBoundaries, thisWeekBoundaries, thisMonthBoundaries } from '../utils/dates';
+import { bucketBoundaries, periodKey } from '../utils/dates';
 import type { CompleteQuestBody, FeedQuery } from '../validators/entry.validators';
-import { calculateStreak, type Frequency } from './streak.service';
+import { calculateStreak } from './streak.service';
 import { levelProgress } from './xp.service';
 
 // ── Complete a quest ──────────────────────────────────────────────────────
+const alreadyCompleted = () =>
+  new AppError(
+    'ALREADY_COMPLETED_TODAY',
+    409,
+    'This quest is already completed for the current period',
+  );
+
 export async function completeQuest(
   questId: string,
   userId: string,
@@ -33,50 +41,38 @@ export async function completeQuest(
         : { completedAt: { gte: start, lte: end } }),
     },
   });
-  if (existing) {
-    throw new AppError(
-      'ALREADY_COMPLETED_TODAY',
-      409,
-      'This quest is already completed for the current period',
-    );
-  }
+  if (existing) throw alreadyCompleted();
 
-  // Snapshot XP from the quest's current value
-  const entry = await prisma.questEntry.create({
-    data: {
-      questId,
-      userId,
-      xpEarned: quest.xpReward,
-      note: body.note?.trim() || null,
-    },
-    include: { quest: { select: { id: true, title: true, difficulty: true, frequency: true } } },
-  });
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // Snapshot XP from the quest's current value. The unique
+      // (quest_id, period_key) index makes concurrent completes race-safe.
+      const entry = await tx.questEntry.create({
+        data: {
+          questId,
+          userId,
+          xpEarned: quest.xpReward,
+          note: body.note?.trim() || null,
+          periodKey: periodKey(quest.frequency, timezone),
+        },
+        include: { quest: { select: { id: true, title: true, difficulty: true, frequency: true } } },
+      });
 
-  // ONCE quests transition to COMPLETED after their single entry
-  if (quest.frequency === 'ONCE') {
-    await prisma.quest.update({
-      where: { id: questId },
-      data: { status: 'COMPLETED', completedAt: new Date() },
+      // ONCE quests transition to COMPLETED after their single entry
+      if (quest.frequency === 'ONCE') {
+        await tx.quest.update({
+          where: { id: questId },
+          data: { status: 'COMPLETED', completedAt: new Date() },
+        });
+      }
+
+      return entry;
     });
-  }
-
-  return entry;
-}
-
-function bucketBoundaries(
-  frequency: Frequency,
-  timezone: string,
-): { start: Date; end: Date } {
-  switch (frequency) {
-    case 'DAILY':
-      return todayBoundaries(timezone);
-    case 'WEEKLY':
-      return thisWeekBoundaries(timezone);
-    case 'MONTHLY':
-      return thisMonthBoundaries(timezone);
-    case 'ONCE':
-    default:
-      return { start: new Date(0), end: new Date(8640000000000000) };
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      throw alreadyCompleted();
+    }
+    throw err;
   }
 }
 
@@ -149,17 +145,33 @@ export async function getEntryById(entryId: string, userId: string) {
 export async function deleteEntry(entryId: string, userId: string) {
   const entry = await prisma.questEntry.findUnique({ where: { id: entryId } });
   if (!entry || entry.userId !== userId) throw Errors.notFound('Entry');
-  await prisma.questEntry.delete({ where: { id: entryId } });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.questEntry.delete({ where: { id: entryId } });
+
+    // Undoing the only completion of a ONCE quest reopens it
+    const remaining = await tx.questEntry.count({ where: { questId: entry.questId } });
+    if (remaining === 0) {
+      await tx.quest.updateMany({
+        where: { id: entry.questId, frequency: 'ONCE', status: 'COMPLETED' },
+        data: { status: 'ACTIVE', completedAt: null },
+      });
+    }
+  });
 }
 
 // ── XP/level summary (computed at read time) ──────────────────────────────
-export async function getUserXpSummary(userId: string) {
+// Entries are the single source of truth for XP; users have no xp column.
+export async function getUserTotalXp(userId: string): Promise<number> {
   const agg = await prisma.questEntry.aggregate({
     where: { userId },
     _sum: { xpEarned: true },
   });
-  const totalXp = agg._sum.xpEarned ?? 0;
-  return levelProgress(totalXp);
+  return agg._sum.xpEarned ?? 0;
+}
+
+export async function getUserXpSummary(userId: string) {
+  return levelProgress(await getUserTotalXp(userId));
 }
 
 // ── Re-export for callers needing a streak ────────────────────────────────

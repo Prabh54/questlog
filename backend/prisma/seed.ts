@@ -10,6 +10,8 @@ import { resolve } from 'path';
 config({ path: resolve(__dirname, '../.env') });
 
 import { PrismaClient, Prisma } from '@prisma/client';
+import { periodKey } from '../src/utils/dates';
+import { calculateLevel } from '../src/services/xp.service';
 
 const prisma = new PrismaClient();
 const TARGET_EMAIL = 'harpreet@gmail.com';
@@ -253,14 +255,21 @@ async function main() {
         },
       });
 
+      const usedKeys = new Set<string>();
       const daysBackList = def.completedDays(HISTORY_DAYS);
       for (const daysBack of daysBackList) {
         if (daysBack < 0 || daysBack >= HISTORY_DAYS) continue;
+        const completedAt = randomTimeOnDay(daysBack);
+        // At most one entry per completion bucket (unique quest_id + period_key)
+        const key = periodKey(def.frequency, user.timezone, completedAt);
+        if (usedKeys.has(key)) continue;
+        usedKeys.add(key);
         entries.push({
           questId: quest.id,
           userId: user.id,
           xpEarned: def.xpReward,
-          completedAt: randomTimeOnDay(daysBack),
+          periodKey: key,
+          completedAt,
         });
         totalXp += def.xpReward;
       }
@@ -274,13 +283,8 @@ async function main() {
     }
     console.log(`  ✓ ${entries.length} quest entries created`);
 
-    // Sync user XP/level to match seeded entries
-    const level = Math.floor(1 + Math.sqrt(totalXp / 50));
-    await tx.user.update({
-      where: { id: user.id },
-      data: { xp: totalXp, level },
-    });
-    console.log(`  ✓ User XP synced: ${totalXp} XP / Level ${level}`);
+    // XP / level are derived from entries at read time
+    console.log(`  ✓ User XP: ${totalXp} XP / Level ${calculateLevel(totalXp)}`);
   });
 
   console.log('\n🎉  Seed complete!');
