@@ -30,7 +30,11 @@ function bucketFor(freq: Frequency): (d: Date, tz: string) => string {
 }
 
 // "Previous bucket" — yesterday for daily, last ISO week for weekly.
-function previousBucket(currentBucket: string, freq: Frequency, tz: string): string {
+// Bucket keys are already calendar values in the user's timezone, so the
+// step back is pure calendar arithmetic and is re-keyed in UTC. Re-keying in
+// `tz` would shift UTC midnight to the previous day west of UTC and skip a
+// bucket.
+function previousBucket(currentBucket: string, freq: Frequency): string {
   // Step the calendar date back by 1 day (daily) or 7 days (weekly), re-key.
   // Parse currentBucket back to a Date in UTC anchored to midnight of that bucket.
   // For daily: parse YYYY-MM-DD as UTC midnight.
@@ -48,14 +52,14 @@ function previousBucket(currentBucket: string, freq: Frequency, tz: string): str
     targetMonday.setUTCDate(targetMonday.getUTCDate() + (isoWeek - 1) * 7);
     // Step one week back
     targetMonday.setUTCDate(targetMonday.getUTCDate() - 7);
-    return weekKey(targetMonday, tz);
+    return weekKey(targetMonday, 'UTC');
   }
 
   // Daily
   const [y, m, d] = currentBucket.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
   date.setUTCDate(date.getUTCDate() - 1);
-  return dayKey(date, tz);
+  return dayKey(date, 'UTC');
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
@@ -101,7 +105,7 @@ export function calculateStreak(
 
   // ── Current ─────────────────────────────────────────────────────────────
   const todayBucket = bucket(now, timezone);
-  const yesterdayBucket = previousBucket(todayBucket, frequency, timezone);
+  const yesterdayBucket = previousBucket(todayBucket, frequency);
 
   let cursor: string | null = null;
   if (buckets.has(todayBucket)) cursor = todayBucket;
@@ -110,7 +114,7 @@ export function calculateStreak(
   let current = 0;
   while (cursor && buckets.has(cursor)) {
     current++;
-    cursor = previousBucket(cursor, frequency, timezone);
+    cursor = previousBucket(cursor, frequency);
   }
 
   // ── Longest ─────────────────────────────────────────────────────────────
@@ -120,7 +124,7 @@ export function calculateStreak(
   let run = 0;
   let prev: string | null = null;
   for (const b of sorted) {
-    if (prev !== null && previousBucket(b, frequency, timezone) === prev) {
+    if (prev !== null && previousBucket(b, frequency) === prev) {
       run++;
     } else {
       run = 1;

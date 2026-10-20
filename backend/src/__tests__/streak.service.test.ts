@@ -96,6 +96,36 @@ describe('calculateStreak — DAILY', () => {
   });
 });
 
+describe('calculateStreak — timezones west of UTC', () => {
+  const NY = 'America/New_York';
+  const nyNow = new Date('2026-05-15T22:00:00Z'); // 18:00 New York
+
+  it('counts consecutive days without skipping (DAILY)', () => {
+    // 12:00 New York on 2026-05-11..15
+    const entries = e(
+      '2026-05-11T16:00:00Z',
+      '2026-05-12T16:00:00Z',
+      '2026-05-13T16:00:00Z',
+      '2026-05-14T16:00:00Z',
+      '2026-05-15T16:00:00Z',
+    );
+    const r = calculateStreak(entries, 'DAILY', NY, nyNow);
+    expect(r.current).toBe(5);
+    expect(r.longest).toBe(5);
+  });
+
+  it('counts consecutive ISO weeks without skipping (WEEKLY)', () => {
+    const entries = e(
+      '2026-05-01T16:00:00Z',
+      '2026-05-06T16:00:00Z',
+      '2026-05-13T16:00:00Z',
+    );
+    const r = calculateStreak(entries, 'WEEKLY', NY, nyNow);
+    expect(r.current).toBe(3);
+    expect(r.longest).toBe(3);
+  });
+});
+
 describe('calculateStreak — WEEKLY', () => {
   // 2026-05-15 is Friday of ISO week 2026-W20
   const now = new Date('2026-05-15T12:00:00Z');
