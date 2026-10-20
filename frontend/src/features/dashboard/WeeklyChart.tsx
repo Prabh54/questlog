@@ -32,18 +32,18 @@ export function WeeklyChart({ series }: WeeklyChartProps) {
       <div className="h-48 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={series} margin={{ top: 5, right: 12, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e4e0da" vertical={false} />
             <XAxis
               dataKey="date"
               tickFormatter={formatTick}
-              stroke="#64748b"
+              stroke="#6b6c72"
               fontSize={11}
               tickLine={false}
               axisLine={false}
               interval={Math.max(0, Math.floor(series.length / 6) - 1)}
             />
             <YAxis
-              stroke="#64748b"
+              stroke="#6b6c72"
               fontSize={11}
               tickLine={false}
               axisLine={false}
@@ -52,12 +52,12 @@ export function WeeklyChart({ series }: WeeklyChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1e293b',
-                border: '1px solid #334155',
+                backgroundColor: '#fffefb',
+                border: '1px solid #e4e0da',
                 borderRadius: 8,
                 fontSize: 12,
               }}
-              labelStyle={{ color: '#cbd5e1' }}
+              labelStyle={{ color: '#2a2b30' }}
               labelFormatter={(label: string) =>
                 new Date(label).toLocaleDateString(undefined, {
                   weekday: 'short',
@@ -70,10 +70,10 @@ export function WeeklyChart({ series }: WeeklyChartProps) {
             <Line
               type="monotone"
               dataKey="count"
-              stroke="#8b5cf6"
+              stroke="#3d69b7"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#a78bfa' }}
+              activeDot={{ r: 4, fill: '#3d69b7' }}
             />
           </LineChart>
         </ResponsiveContainer>

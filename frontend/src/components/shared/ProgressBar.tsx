@@ -25,7 +25,7 @@ export function ProgressBar({
   return (
     <div
       className={cn(
-        'w-full overflow-hidden rounded-full bg-surface-800',
+        'w-full overflow-hidden rounded-full bg-track',
         SIZE[size],
         trackClassName,
         className,
@@ -37,7 +37,7 @@ export function ProgressBar({
     >
       <div
         className={cn(
-          'h-full rounded-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-500',
+          'h-full rounded-full bg-primary-500 transition-all duration-500',
           barClassName,
         )}
         style={{ width: `${pct}%` }}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Badge, DIFFICULTY_BADGE } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import type { QuestEntry } from '../../services/quests.api';
+import { categoryBadgeStyle } from '../../lib/categoryStyle';
 
 interface EntryRowProps {
   entry: QuestEntry;
@@ -28,7 +29,7 @@ export function EntryRow({ entry, onUndo, undoing }: EntryRowProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             to={`/quests/${entry.quest.id}`}
-            className="font-medium text-surface-100 hover:text-primary-300 truncate"
+            className="font-medium text-surface-100 hover:text-primary-700 truncate"
           >
             {entry.quest.title}
           </Link>
@@ -36,9 +37,7 @@ export function EntryRow({ entry, onUndo, undoing }: EntryRowProps) {
             <Badge
               size="sm"
               style={{
-                backgroundColor: `${entry.quest.category.color}20`,
-                color: entry.quest.category.color,
-                borderColor: `${entry.quest.category.color}40`,
+                ...categoryBadgeStyle(entry.quest.category.color),
                 borderWidth: 1,
                 borderStyle: 'solid',
               }}

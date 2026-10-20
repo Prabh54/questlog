@@ -26,7 +26,7 @@ export function AppShell() {
       {open && (
         <div
           aria-hidden
-          className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-20 bg-ink/30 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
@@ -42,7 +42,7 @@ export function AppShell() {
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary-500" />
+            <Zap className="h-5 w-5 text-navy" />
             <span className="font-bold text-surface-50">QuestLog</span>
           </div>
         </header>

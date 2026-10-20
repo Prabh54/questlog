@@ -7,6 +7,7 @@ import { Badge, DIFFICULTY_BADGE } from '../../components/ui/Badge';
 import { questsApi } from '../../services/quests.api';
 import type { TodayQuestSummary } from '../../services/analytics.api';
 import { cn } from '../../lib/cn';
+import { categoryBadgeStyle } from '../../lib/categoryStyle';
 
 interface TodayQuestsProps {
   quests: TodayQuestSummary[];
@@ -28,7 +29,7 @@ export function TodayQuests({ quests }: TodayQuestsProps) {
     <Card>
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-lg font-semibold text-surface-50">Today&apos;s quests</h2>
-        <Link to="/quests" className="text-xs text-primary-400 hover:text-primary-300">
+        <Link to="/quests" className="text-xs text-primary-600 hover:text-primary-700">
           See all →
         </Link>
       </div>
@@ -37,7 +38,7 @@ export function TodayQuests({ quests }: TodayQuestsProps) {
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <Swords className="mb-2 h-8 w-8 text-surface-600" />
           <p className="text-sm text-surface-400">No daily quests yet.</p>
-          <Link to="/quests/new" className="mt-2 text-xs text-primary-400 hover:text-primary-300">
+          <Link to="/quests/new" className="mt-2 text-xs text-primary-600 hover:text-primary-700">
             Create your first
           </Link>
         </div>
@@ -54,7 +55,7 @@ export function TodayQuests({ quests }: TodayQuestsProps) {
               <div className="min-w-0 flex-1">
                 <Link
                   to={`/quests/${q.id}`}
-                  className="block font-medium text-surface-100 hover:text-primary-300 truncate"
+                  className="block font-medium text-surface-100 hover:text-primary-700 truncate"
                 >
                   {q.title}
                 </Link>
@@ -63,9 +64,7 @@ export function TodayQuests({ quests }: TodayQuestsProps) {
                     <Badge
                       size="sm"
                       style={{
-                        backgroundColor: `${q.category.color}20`,
-                        color: q.category.color,
-                        borderColor: `${q.category.color}40`,
+                        ...categoryBadgeStyle(q.category.color),
                         borderWidth: 1,
                         borderStyle: 'solid',
                       }}

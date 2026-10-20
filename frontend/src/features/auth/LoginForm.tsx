@@ -76,7 +76,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-surface-400">
         No account?{' '}
-        <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">
+        <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
           Create one
         </Link>
       </p>

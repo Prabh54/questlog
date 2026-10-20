@@ -14,11 +14,11 @@ interface HeatmapProps {
 
 // Five intensity buckets — 0 / 1 / 2-3 / 4-5 / 6+
 const LEVEL_CLASS = [
-  'bg-surface-800',
-  'bg-primary-900',
-  'bg-primary-700',
-  'bg-primary-500',
+  'bg-line',
+  'bg-primary-200',
   'bg-primary-300',
+  'bg-primary-500',
+  'bg-primary-700',
 ];
 
 function bucket(count: number): number {

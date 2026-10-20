@@ -13,69 +13,87 @@ export default {
       },
 
       // ── Color palette ────────────────────────────────────────────────────
+      // Warm-paper theme. Raw tokens live in src/index.css as RGB channels so
+      // Tailwind opacity modifiers (e.g. bg-surface-900/95) keep working.
       colors: {
-        // Brand — violet (quest energy)
+        page: 'rgb(var(--page) / <alpha-value>)',
+        sidebar: 'rgb(var(--sidebar) / <alpha-value>)',
+        'nav-active': 'rgb(var(--nav-active) / <alpha-value>)',
+        card: 'rgb(var(--card) / <alpha-value>)',
+        'card-inner': 'rgb(var(--card-inner) / <alpha-value>)',
+        paper: 'rgb(var(--white) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+        track: 'rgb(var(--track) / <alpha-value>)',
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        navy: 'rgb(var(--navy) / <alpha-value>)',
+        flame: {
+          DEFAULT: 'rgb(var(--flame) / <alpha-value>)',
+          bg: 'rgb(var(--flame-bg) / <alpha-value>)',
+        },
+        // Accent — muted blue, anchored on --blue (#3d69b7) at 500.
         primary: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50: '#eef1f7',
+          100: '#dde3ef',
+          200: '#b9c1d5', // --blue-soft
+          300: '#8fa3cc',
+          400: '#5f83c4',
+          500: '#3d69b7', // --blue
+          600: '#3d69b7',
+          700: '#2f5395',
+          800: '#243f71',
+          900: '#1a2d50',
+          950: '#0d151f', // --navy
         },
-        // Neutral surfaces — slate
+        // Neutral surfaces. The scale is ordered so that 950 is the page
+        // background and 50 is the darkest ink: components written as
+        // "bg-surface-900 text-surface-50" read as card + ink.
         surface: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
+          50: 'rgb(var(--ink) / <alpha-value>)',
+          100: 'rgb(var(--text) / <alpha-value>)',
+          200: '#34353a',
+          300: '#45464c',
+          400: '#5a5b61',
+          500: 'rgb(var(--muted) / <alpha-value>)',
+          600: '#a19f9a',
+          700: 'rgb(var(--line) / <alpha-value>)',
+          800: 'rgb(var(--card-inner) / <alpha-value>)',
+          900: 'rgb(var(--card) / <alpha-value>)',
+          950: 'rgb(var(--page) / <alpha-value>)',
         },
-        // Status — emerald
+        // Status — sage green
         success: {
-          50: '#ecfdf5',
-          100: '#d1fae5',
-          400: '#34d399',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
+          50: '#eef3ec',
+          100: '#dce7d8',
+          400: '#4f7a4a',
+          500: '#5c8a56',
+          600: '#466f41',
+          700: '#375834',
         },
-        // Status — amber
+        // Status — ochre
         warning: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          400: '#fbbf24',
-          500: '#f59e0b',
-          600: '#d97706',
-          700: '#b45309',
+          50: '#f8f0e2',
+          100: '#f0e0c4',
+          400: '#a8681c',
+          500: '#c07a26',
+          600: '#9a5f19',
+          700: '#7c4c14',
         },
-        // Status — rose
+        // Status — brick red
         danger: {
-          50: '#fff1f2',
-          100: '#ffe4e6',
-          400: '#fb7185',
-          500: '#f43f5e',
-          600: '#e11d48',
-          700: '#be123c',
+          50: '#f7e9e6',
+          100: '#efd3cd',
+          400: '#a8322a',
+          500: '#b83a30',
+          600: '#a8322a',
+          700: '#8a2821',
         },
-        // XP / gold
+        // XP — streak orange / flame
         xp: {
-          50: '#fefce8',
-          100: '#fef9c3',
-          400: '#facc15',
-          500: '#eab308',
-          600: '#ca8a04',
+          50: '#faf0e9',
+          100: '#eeddd4', // --flame-bg
+          400: '#d9572a', // --flame
+          500: '#fd7f22', // --orange
+          600: '#c24a20',
         },
       },
 
@@ -94,8 +112,9 @@ export default {
 
       // ── Box shadow ───────────────────────────────────────────────────────
       boxShadow: {
-        glow: '0 0 20px -4px rgb(139 92 246 / 0.4)',
-        'glow-sm': '0 0 12px -2px rgb(139 92 246 / 0.3)',
+        // Soft paper shadows (formerly violet glows).
+        glow: '0 1px 2px rgb(20 22 28 / 0.06), 0 4px 12px -4px rgb(20 22 28 / 0.08)',
+        'glow-sm': '0 1px 2px rgb(20 22 28 / 0.08)',
       },
 
       // ── Animation ────────────────────────────────────────────────────────

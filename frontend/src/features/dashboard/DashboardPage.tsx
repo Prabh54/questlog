@@ -54,8 +54,6 @@ export default function DashboardPage() {
           value={summary?.totalXp ?? '—'}
           icon={Zap}
           tone="xp"
-          className="border-t-2 border-yellow-500/60"
-          iconClassName="text-yellow-500/40"
         />
         <StatCard
           label="Level"
@@ -63,8 +61,6 @@ export default function DashboardPage() {
           subtitle={summary ? `${summary.xpToNext} XP to next` : undefined}
           icon={Activity}
           tone="primary"
-          className="border-t-2 border-purple-500/60"
-          iconClassName="text-purple-500/40"
         />
         <StatCard
           label="Today"
@@ -72,24 +68,18 @@ export default function DashboardPage() {
           subtitle={summary ? 'of daily quests done' : undefined}
           icon={Target}
           tone="success"
-          className="border-t-2 border-emerald-500/60"
-          iconClassName="text-emerald-500/40"
         />
         <StatCard
           label="Active quests"
           value={summary?.activeQuestCount ?? '—'}
           icon={Swords}
-          className="border-t-2 border-blue-500/60"
-          iconClassName="text-blue-500/40"
         />
         <StatCard
           label="Best streak"
           value={summary?.bestStreak ?? '—'}
           subtitle={summary && summary.bestStreak > 0 ? 'days in a row' : undefined}
           icon={Flame}
-          tone="warning"
-          className="border-t-2 border-orange-500/60"
-          iconClassName="text-orange-500/40"
+          tone="xp"
         />
       </div>
 
@@ -134,7 +124,7 @@ export default function DashboardPage() {
             <h2 className="text-lg font-semibold text-surface-50">Recent activity</h2>
             <a
               href="/history"
-              className="text-xs text-primary-400 hover:text-primary-300"
+              className="text-xs text-primary-600 hover:text-primary-700"
             >
               See all →
             </a>

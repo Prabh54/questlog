@@ -42,7 +42,7 @@ function Chip({
       className={cn(
         'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
         active
-          ? 'bg-primary-600/20 border-primary-500 text-primary-200'
+          ? 'bg-primary-600/20 border-primary-500 text-primary-700'
           : 'bg-surface-900 border-surface-700 text-surface-400 hover:border-surface-600 hover:text-surface-200',
       )}
       style={

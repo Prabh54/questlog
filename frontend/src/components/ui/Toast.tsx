@@ -157,7 +157,7 @@ const VARIANT_STYLES: Record<
   info: {
     icon: Info,
     ring: 'border-primary-500/40 bg-primary-500/10',
-    iconClass: 'text-primary-400',
+    iconClass: 'text-primary-600',
   },
 };
 

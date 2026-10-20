@@ -136,7 +136,7 @@ export default function ProfilePage() {
         {/* ── Identity card ────────────────────────────────────────── */}
         <Card className="lg:col-span-1">
           <div className="flex flex-col items-center text-center">
-            <div className="h-20 w-20 rounded-full bg-primary-600/20 border-2 border-primary-600/40 flex items-center justify-center text-2xl font-bold text-primary-300">
+            <div className="h-20 w-20 rounded-full bg-primary-600/20 border-2 border-primary-600/40 flex items-center justify-center text-2xl font-bold text-primary-700">
               {user.username[0].toUpperCase()}
             </div>
             <p className="mt-3 text-lg font-semibold text-surface-50">{user.username}</p>
@@ -208,7 +208,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setShowAdvancedTz((v) => !v)}
-                className="text-xs text-primary-400 hover:text-primary-300"
+                className="text-xs text-primary-600 hover:text-primary-700"
               >
                 {showAdvancedTz ? 'Use picker' : 'Enter a different IANA timezone'}
               </button>
