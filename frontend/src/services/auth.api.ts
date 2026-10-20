@@ -7,6 +7,8 @@ export interface AuthUser {
   role: string;
   xp: number;
   level: number;
+  xpToNext: number;
+  progress: number; // 0..1 through the current level
   timezone: string;
   createdAt: string;
   updatedAt: string;
