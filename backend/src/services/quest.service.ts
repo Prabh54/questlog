@@ -121,7 +121,8 @@ export async function getQuestById(questId: string, userId: string) {
       where: { id: questId },
       include: {
         category: true,
-        entries: { orderBy: { completedAt: 'desc' }, take: 60 },
+        // All entries, so the detail page's streaks and total aren't capped
+        entries: { orderBy: { completedAt: 'desc' } },
       },
     }),
   ]);
