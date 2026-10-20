@@ -22,6 +22,7 @@ import {
   type PerQuestStreak,
 } from '../../services/analytics.api';
 import { cn } from '../../lib/cn';
+import { categoryBadgeStyle } from '../../lib/categoryStyle';
 
 const XP_RANGES: { value: CompletionRange; label: string }[] = [
   { value: '7d', label: '7d' },
@@ -134,7 +135,7 @@ export default function AnalyticsPage() {
                 className={cn(
                   'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                   xpRange === r.value
-                    ? 'bg-primary-600 text-white'
+                    ? 'bg-paper text-surface-50 shadow-sm'
                     : 'text-surface-400 hover:text-surface-200',
                 )}
               >
@@ -156,14 +157,14 @@ export default function AnalyticsPage() {
               <AreaChart data={xpSeries} margin={{ top: 5, right: 12, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="xp-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#eab308" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#eab308" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#d9572a" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#d9572a" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e4e0da" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  stroke="#64748b"
+                  stroke="#6b6c72"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -176,7 +177,7 @@ export default function AnalyticsPage() {
                   }
                 />
                 <YAxis
-                  stroke="#64748b"
+                  stroke="#6b6c72"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -184,12 +185,12 @@ export default function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #334155',
+                    backgroundColor: '#fffefb',
+                    border: '1px solid #e4e0da',
                     borderRadius: 8,
                     fontSize: 12,
                   }}
-                  labelStyle={{ color: '#cbd5e1' }}
+                  labelStyle={{ color: '#2a2b30' }}
                   labelFormatter={(label: string) =>
                     new Date(label).toLocaleDateString(undefined, {
                       weekday: 'short',
@@ -206,7 +207,7 @@ export default function AnalyticsPage() {
                 <Area
                   type="monotone"
                   dataKey="cumulativeXp"
-                  stroke="#eab308"
+                  stroke="#d9572a"
                   strokeWidth={2}
                   fill="url(#xp-fill)"
                 />
@@ -248,15 +249,15 @@ function StreakTable({
             <li key={r.questId} className="flex items-center gap-3 py-2.5">
               <Link
                 to={`/quests/${r.questId}`}
-                className="min-w-0 flex-1 truncate text-sm font-medium text-surface-100 hover:text-primary-300"
+                className="min-w-0 flex-1 truncate text-sm font-medium text-surface-100 hover:text-primary-700"
               >
                 {r.questTitle}
               </Link>
               <Badge size="sm" variant={DIFFICULTY_BADGE[r.difficulty]}>
                 {r.difficulty}
               </Badge>
-              <span className="flex items-center gap-1 font-mono text-xs text-orange-400">
-                <Flame className="h-3 w-3 fill-orange-400" />
+              <span className="flex items-center gap-1 font-mono text-xs text-flame">
+                <Flame className="h-3 w-3 fill-flame" />
                 {r.longest}
               </span>
               <span className="font-mono text-xs text-surface-500 w-14 text-right">
@@ -305,7 +306,7 @@ function QuestHighlightCard({
             <>
               <Link
                 to={`/quests/${quest.questId}`}
-                className="mt-1 block truncate text-lg font-semibold text-surface-50 hover:text-primary-300"
+                className="mt-1 block truncate text-lg font-semibold text-surface-50 hover:text-primary-700"
               >
                 {quest.questTitle}
               </Link>
@@ -314,9 +315,7 @@ function QuestHighlightCard({
                   <Badge
                     size="sm"
                     style={{
-                      backgroundColor: `${quest.category.color}20`,
-                      color: quest.category.color,
-                      borderColor: `${quest.category.color}40`,
+                      ...categoryBadgeStyle(quest.category.color),
                       borderWidth: 1,
                       borderStyle: 'solid',
                     }}

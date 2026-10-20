@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge, DIFFICULTY_BADGE } from '../../components/ui/Badge';
 import { cn } from '../../lib/cn';
 import type { Quest } from '../../services/quests.api';
+import { categoryBadgeStyle } from '../../lib/categoryStyle';
 
 interface QuestCardProps {
   quest: Quest;
@@ -30,7 +31,7 @@ export function QuestCard({ quest, onComplete, onArchive, onUnarchive, completin
         <div className="min-w-0 flex-1">
           <Link
             to={`/quests/${quest.id}`}
-            className="block font-semibold text-surface-50 hover:text-primary-300 truncate"
+            className="block font-semibold text-surface-50 hover:text-primary-700 truncate"
           >
             {quest.title}
           </Link>
@@ -39,8 +40,8 @@ export function QuestCard({ quest, onComplete, onArchive, onUnarchive, completin
           )}
         </div>
         {quest.streak > 0 && (
-          <span className="flex items-center gap-1 text-xs font-medium text-orange-400 shrink-0">
-            <Flame className="h-3.5 w-3.5 fill-orange-400" />
+          <span className="flex items-center gap-1 text-xs font-medium text-flame shrink-0">
+            <Flame className="h-3.5 w-3.5 fill-flame" />
             {quest.streak}
           </span>
         )}
@@ -52,9 +53,7 @@ export function QuestCard({ quest, onComplete, onArchive, onUnarchive, completin
           <Badge
             size="sm"
             style={{
-              backgroundColor: `${quest.category.color}20`,
-              color: quest.category.color,
-              borderColor: `${quest.category.color}40`,
+              ...categoryBadgeStyle(quest.category.color),
               borderWidth: 1,
               borderStyle: 'solid',
             }}

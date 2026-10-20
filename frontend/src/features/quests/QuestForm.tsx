@@ -210,7 +210,7 @@ export function QuestForm({ initial, onSuccess, onCancel }: QuestFormProps) {
               onClick={() => field.onChange(!field.value)}
               className={cn(
                 'relative h-6 w-11 rounded-full transition-colors',
-                field.value ? 'bg-primary-600' : 'bg-surface-700',
+                field.value ? 'bg-primary-500' : 'bg-track',
               )}
             >
               <span
@@ -254,7 +254,7 @@ function InlineCategoryForm({
 }) {
   const qc = useQueryClient();
   const [name, setName] = useState('');
-  const [color, setColor] = useState('#6366f1');
+  const [color, setColor] = useState('#3d69b7');
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({

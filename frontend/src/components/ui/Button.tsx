@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'bg-primary-600 text-white hover:bg-primary-500 active:bg-primary-700 shadow-glow-sm',
+          'bg-navy text-paper hover:bg-navy/90 active:bg-navy shadow-glow-sm',
         secondary:
           'bg-surface-800 text-surface-100 hover:bg-surface-700 border border-surface-700',
         ghost:
@@ -17,7 +17,7 @@ const buttonVariants = cva(
         danger:
           'bg-danger-600 text-white hover:bg-danger-500 active:bg-danger-700',
         outline:
-          'border border-primary-600 text-primary-400 hover:bg-primary-600/10',
+          'border border-primary-500 text-primary-600 hover:bg-primary-500/10',
       },
       size: {
         sm: 'h-8 px-3 text-xs',

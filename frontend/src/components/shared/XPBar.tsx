@@ -16,8 +16,8 @@ export function XPBar({ level, xpInLevel, xpToNext, progress, className }: XPBar
     <div className={cn('space-y-2', className)}>
       <div className="flex items-end justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600/20 border border-primary-600/40 text-primary-300">
-            <Zap className="h-4 w-4 fill-primary-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-100 border border-primary-200 text-primary-700">
+            <Zap className="h-4 w-4 fill-primary-500" />
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-surface-500">Level</p>
@@ -33,7 +33,6 @@ export function XPBar({ level, xpInLevel, xpToNext, progress, className }: XPBar
       <ProgressBar
         value={progress}
         size="md"
-        barClassName="bg-gradient-to-r from-primary-600 via-primary-400 to-xp-400"
       />
 
       <p className="text-xs text-surface-500">

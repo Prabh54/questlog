@@ -50,17 +50,17 @@ export function CategoryBreakdown() {
                 <YAxis
                   type="category"
                   dataKey="name"
-                  stroke="#94a3b8"
+                  stroke="#6b6c72"
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
                   width={110}
                 />
                 <Tooltip
-                  cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
+                  cursor={{ fill: 'rgba(20, 22, 28, 0.04)' }}
                   contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #334155',
+                    backgroundColor: '#fffefb',
+                    border: '1px solid #e4e0da',
                     borderRadius: 8,
                     fontSize: 12,
                   }}
@@ -71,7 +71,7 @@ export function CategoryBreakdown() {
                 />
                 <Bar dataKey="completions" radius={[0, 6, 6, 0]} label={{
                   position: 'right',
-                  fill: '#cbd5e1',
+                  fill: '#2a2b30',
                   fontSize: 11,
                   formatter: (v: number) => `${v}`,
                 }}>

@@ -16,7 +16,7 @@ export default function LandingPage() {
       {/* ── Top nav ───────────────────────────────────────────────────── */}
       <header className="flex items-center justify-between px-6 py-4 lg:px-12">
         <div className="flex items-center gap-2">
-          <Zap className="h-6 w-6 text-primary-500" />
+          <Zap className="h-6 w-6 text-navy" />
           <span className="text-lg font-bold tracking-tight text-surface-50">QuestLog</span>
         </div>
         <Link
@@ -31,13 +31,13 @@ export default function LandingPage() {
       <section className="flex flex-1 items-center px-6 lg:px-12">
         <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-2 lg:items-center">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-600/30 bg-primary-600/10 px-3 py-1 text-xs font-medium text-primary-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-600/30 bg-primary-600/10 px-3 py-1 text-xs font-medium text-primary-700">
               <Zap className="h-3 w-3" />
               Gamified habit tracking
             </span>
             <h1 className="mt-4 text-4xl font-bold tracking-tight text-surface-50 sm:text-5xl text-balance">
               Turn your habits into{' '}
-              <span className="bg-gradient-to-r from-primary-400 to-xp-400 bg-clip-text text-transparent">
+              <span className="text-primary-600">
                 quests
               </span>
               .
@@ -75,7 +75,7 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-3">
           <Feature
             icon={Swords}
-            tone="text-primary-400 bg-primary-600/15 border-primary-600/30"
+            tone="text-primary-600 bg-primary-600/15 border-primary-600/30"
             title="Quests for every habit"
             description="Daily, weekly, or one-off. Set XP rewards from 5 to 100 and pick a difficulty tier."
           />
@@ -125,10 +125,7 @@ function Feature({
 function DashboardMockup() {
   return (
     <div className="relative">
-      {/* Glow */}
-      <div className="absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-primary-600/20 via-transparent to-xp-500/20 blur-2xl" />
-
-      <div className="rounded-xl border border-surface-700 bg-surface-900 p-4 shadow-2xl">
+      <div className="rounded-xl border border-surface-700 bg-surface-900 p-4 shadow-glow">
         {/* Window chrome */}
         <div className="flex items-center gap-1.5 mb-3">
           <span className="h-2 w-2 rounded-full bg-surface-700" />
@@ -139,7 +136,7 @@ function DashboardMockup() {
         {/* Mini stat row */}
         <div className="grid grid-cols-3 gap-2">
           <MockStat label="XP" value="2,480" tone="text-xp-400" />
-          <MockStat label="Level" value="14" tone="text-primary-400" />
+          <MockStat label="Level" value="14" tone="text-primary-600" />
           <MockStat label="Streak" value="23 🔥" tone="text-warning-400" />
         </div>
 
@@ -203,10 +200,10 @@ function MockHeatmap() {
   });
   const colors = [
     'bg-surface-800',
-    'bg-primary-900',
-    'bg-primary-700',
-    'bg-primary-500',
+    'bg-primary-200',
     'bg-primary-300',
+    'bg-primary-500',
+    'bg-primary-700',
   ];
   return (
     <div

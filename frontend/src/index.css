@@ -12,6 +12,30 @@
 @layer base {
   :root {
     --sidebar-width: 16rem;
+
+    /* Palette — stored as RGB channels for Tailwind's <alpha-value>. */
+    /* Backgrounds */
+    --page: 238 235 229;       /* #eeebe5 main background (warm paper) */
+    --sidebar: 230 227 222;    /* #e6e3de sidebar background */
+    --nav-active: 219 215 210; /* #dbd7d2 active nav item */
+    --card: 245 242 236;       /* #f5f2ec all cards */
+    --card-inner: 241 239 234; /* #f1efea quote box, segmented control */
+    --white: 255 254 251;      /* #fffefb active segment */
+    --line: 228 224 218;       /* #e4e0da dividers, gridlines */
+
+    /* Text */
+    --ink: 20 22 28;           /* #14161c headings, main text */
+    --text: 42 43 48;          /* #2a2b30 body text */
+    --muted: 107 108 114;      /* #6b6c72 sub-labels, axis labels */
+
+    /* Accents */
+    --navy: 13 21 31;          /* #0d151f primary button, checked circles */
+    --blue: 61 105 183;        /* #3d69b7 progress, ring, highlighted bar */
+    --blue-soft: 185 193 213;  /* #b9c1d5 normal chart bars */
+    --track: 217 216 220;      /* #d9d8dc empty part of bars and ring */
+    --orange: 253 127 34;      /* #fd7f22 streak dot */
+    --flame: 217 87 42;        /* #d9572a flame icon */
+    --flame-bg: 238 221 212;   /* #eeddd4 circle behind the flame */
   }
 
   html {
@@ -20,7 +44,7 @@
   }
 
   body {
-    @apply bg-surface-950 text-surface-100 font-sans;
+    @apply bg-page text-surface-100 font-sans;
   }
 
   /* Scrollbar */
@@ -31,7 +55,7 @@
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-700 rounded-full;
+    @apply bg-track rounded-full;
   }
 
   /* Focus ring */

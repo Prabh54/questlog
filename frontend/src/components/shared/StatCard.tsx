@@ -14,7 +14,7 @@ interface StatCardProps {
 
 const TONE_RING: Record<NonNullable<StatCardProps['tone']>, string> = {
   default: 'text-surface-400',
-  primary: 'text-primary-400',
+  primary: 'text-primary-600',
   success: 'text-success-400',
   warning: 'text-warning-400',
   xp: 'text-xp-400',

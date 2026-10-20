@@ -5,8 +5,8 @@ import { cn } from '../../lib/cn';
 const cardVariants = cva('rounded-xl border', {
   variants: {
     variant: {
-      default: 'bg-surface-900 border-surface-800',
-      elevated: 'bg-surface-800 border-surface-700 shadow-lg',
+      default: 'bg-card border-line/70',
+      elevated: 'bg-card border-line shadow-glow',
       ghost: 'bg-transparent border-transparent',
     },
     padding: {

@@ -111,7 +111,7 @@ export function RegisterForm() {
 
       <p className="text-center text-sm text-surface-400">
         Already have an account?{' '}
-        <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium">
+        <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
           Sign in
         </Link>
       </p>

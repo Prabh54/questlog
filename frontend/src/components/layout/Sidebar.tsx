@@ -31,16 +31,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-surface-800 bg-surface-950 transition-transform duration-200 ease-out',
+        'fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-line bg-sidebar transition-transform duration-200 ease-out',
         'lg:translate-x-0',
         open ? 'translate-x-0' : '-translate-x-full',
       )}
       aria-label="Primary navigation"
     >
       {/* Logo + mobile close */}
-      <div className="flex h-16 items-center justify-between px-6 border-b border-surface-800">
+      <div className="flex h-16 items-center justify-between px-6 border-b border-line">
         <div className="flex items-center gap-2">
-          <Zap className="h-6 w-6 text-primary-500" />
+          <Zap className="h-6 w-6 text-navy" />
           <span className="text-lg font-bold tracking-tight text-surface-50">QuestLog</span>
         </div>
         <button
@@ -54,14 +54,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       {/* XP bar */}
       {user && (
-        <div className="px-4 py-3 border-b border-surface-800">
+        <div className="px-4 py-3 border-b border-line">
           <div className="flex justify-between text-xs text-surface-400 mb-1">
             <span className="font-medium text-surface-300">Lv {user.level}</span>
             <span className="font-mono text-xp-400">{user.xp} XP</span>
           </div>
-          <div className="h-1.5 w-full rounded-full bg-surface-800">
+          <div className="h-1.5 w-full rounded-full bg-track">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-primary-600 to-xp-500 transition-all duration-500"
+              className="h-full rounded-full bg-primary-500 transition-all duration-500"
               style={{ width: `${Math.min(user.xp % 100, 100)}%` }}
             />
           </div>
@@ -79,8 +79,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-primary-600/15 text-primary-300'
-                  : 'text-surface-400 hover:bg-surface-800 hover:text-surface-200',
+                  ? 'bg-nav-active text-surface-50'
+                  : 'text-surface-400 hover:bg-nav-active/60 hover:text-surface-100',
               )
             }
           >
@@ -92,7 +92,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       {/* Footer */}
       {user && (
-        <div className="border-t border-surface-800 p-3">
+        <div className="border-t border-line p-3">
           <div className="mb-2 px-3 py-2">
             <p className="text-xs font-medium text-surface-200 truncate">{user.username}</p>
             <p className="text-xs text-surface-500 truncate">{user.email}</p>
