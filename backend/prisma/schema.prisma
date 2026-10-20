@@ -43,8 +43,6 @@ model User {
   username  String   @unique
   password  String
   role      UserRole @default(USER)
-  xp        Int      @default(0)
-  level     Int      @default(1)
   timezone  String   @default("UTC")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -109,6 +107,8 @@ model QuestEntry {
   userId      String   @map("user_id")
   xpEarned    Int      @map("xp_earned")
   note        String?
+  // Completion bucket (see periodKey in src/utils/dates.ts); one entry per bucket
+  periodKey   String   @map("period_key")
   completedAt DateTime @default(now()) @map("completed_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -116,6 +116,7 @@ model QuestEntry {
   quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([questId, periodKey])
   @@index([questId])
   @@index([questId, completedAt])
   @@index([userId, completedAt(sort: Desc)])

@@ -13,6 +13,8 @@ config({ path: resolve(__dirname, '../.env') });
 
 import bcrypt from 'bcryptjs';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { periodKey } from '../src/utils/dates';
+import { calculateLevel } from '../src/services/xp.service';
 
 const prisma = new PrismaClient();
 
@@ -229,13 +231,20 @@ async function main() {
           status: 'ACTIVE',
         },
       });
+      const usedKeys = new Set<string>();
       for (const daysBack of def.completedDays(HISTORY_DAYS)) {
         if (daysBack < 0 || daysBack >= HISTORY_DAYS) continue;
+        const completedAt = randomTimeOnDay(daysBack);
+        // At most one entry per completion bucket (unique quest_id + period_key)
+        const key = periodKey(def.frequency, user.timezone, completedAt);
+        if (usedKeys.has(key)) continue;
+        usedKeys.add(key);
         entries.push({
           questId: quest.id,
           userId: user.id,
           xpEarned: def.xpReward,
-          completedAt: randomTimeOnDay(daysBack),
+          periodKey: key,
+          completedAt,
         });
         totalXp += def.xpReward;
       }
@@ -249,13 +258,8 @@ async function main() {
     }
     console.log(`  ✓ ${entries.length} quest entries`);
 
-    // Sync XP / level
-    const level = Math.floor(1 + Math.sqrt(totalXp / 50));
-    await tx.user.update({
-      where: { id: user.id },
-      data: { xp: totalXp, level },
-    });
-    console.log(`  ✓ XP synced: ${totalXp} XP → Level ${level}`);
+    // XP / level are derived from entries at read time
+    console.log(`  ✓ ${totalXp} XP → Level ${calculateLevel(totalXp)}`);
   });
 
   console.log('\n🎉  Demo account ready!');

@@ -23,6 +23,8 @@ interface AuthContextValue {
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   updateMe: (payload: UpdateMePayload) => Promise<AuthUser>;
+  /** Re-fetch /auth/me, e.g. after XP changes from completing or undoing a quest. */
+  refreshUser: () => Promise<void>;
   logout: () => void;
 }
 
@@ -76,6 +78,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return u;
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const { user: u } = await authApi.getMe();
+    setUser(u);
+  }, []);
+
   const logout = useCallback(() => {
     authApi.logout().catch(() => {});
     localStorage.removeItem(TOKEN_KEY);
@@ -84,8 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, token, isLoading, login, register, updateMe, logout }),
-    [user, token, isLoading, login, register, updateMe, logout],
+    () => ({ user, token, isLoading, login, register, updateMe, refreshUser, logout }),
+    [user, token, isLoading, login, register, updateMe, refreshUser, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
