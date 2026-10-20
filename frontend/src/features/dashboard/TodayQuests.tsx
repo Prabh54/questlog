@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge, DIFFICULTY_BADGE } from '../../components/ui/Badge';
 import { questsApi } from '../../services/quests.api';
+import { useAuth } from '../auth/useAuth';
 import type { TodayQuestSummary } from '../../services/analytics.api';
 import { cn } from '../../lib/cn';
 
@@ -14,6 +15,7 @@ interface TodayQuestsProps {
 
 export function TodayQuests({ quests }: TodayQuestsProps) {
   const qc = useQueryClient();
+  const { refreshUser } = useAuth();
   const completeMutation = useMutation({
     mutationFn: (id: string) => questsApi.complete(id),
     onSuccess: () => {
@@ -21,6 +23,7 @@ export function TodayQuests({ quests }: TodayQuestsProps) {
       qc.invalidateQueries({ queryKey: ['quests'] });
       qc.invalidateQueries({ queryKey: ['entries'] });
       qc.invalidateQueries({ queryKey: ['analytics/completions'] });
+      refreshUser().catch(() => {});
     },
   });
 

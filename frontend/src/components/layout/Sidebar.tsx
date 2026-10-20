@@ -62,7 +62,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <div className="h-1.5 w-full rounded-full bg-surface-800">
             <div
               className="h-full rounded-full bg-gradient-to-r from-primary-600 to-xp-500 transition-all duration-500"
-              style={{ width: `${Math.min(user.xp % 100, 100)}%` }}
+              style={{ width: `${Math.min(user.progress * 100, 100)}%` }}
             />
           </div>
         </div>

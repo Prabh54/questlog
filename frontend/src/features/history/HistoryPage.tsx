@@ -10,6 +10,7 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { EntryRow } from './EntryRow';
+import { useAuth } from '../auth/useAuth';
 import { entriesApi, questsApi, type QuestEntry } from '../../services/quests.api';
 
 interface Filters {
@@ -20,6 +21,7 @@ interface Filters {
 
 export default function HistoryPage() {
   const qc = useQueryClient();
+  const { refreshUser } = useAuth();
   const [filters, setFilters] = useState<Filters>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -49,6 +51,7 @@ export default function HistoryPage() {
       qc.invalidateQueries({ queryKey: ['entries'] });
       qc.invalidateQueries({ queryKey: ['quests'] });
       qc.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+      refreshUser().catch(() => {});
     },
   });
 
