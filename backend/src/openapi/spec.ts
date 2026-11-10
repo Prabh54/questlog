@@ -24,6 +24,15 @@ const bearerAuth = registry.registerComponent('securitySchemes', 'bearerAuth', {
   type: 'http',
   scheme: 'bearer',
   bearerFormat: 'JWT',
+  description: 'Access token from /auth/login, /auth/register or /auth/refresh (15-minute lifetime).',
+});
+const refreshCookie = registry.registerComponent('securitySchemes', 'refreshCookie', {
+  type: 'apiKey',
+  in: 'cookie',
+  name: '__Host-ql_refresh',
+  description:
+    'HttpOnly, Secure, SameSite=Strict refresh-token cookie set by login/register/refresh ' +
+    '(named `ql_refresh` outside production). Single-use: every refresh rotates it.',
 });
 
 // ── Named components ─────────────────────────────────────────────────────
@@ -123,27 +132,68 @@ route('get', '/health', {
 });
 
 // ── Auth ─────────────────────────────────────────────────────────────────
+const setsRefreshCookie = {
+  'Set-Cookie': {
+    description: 'Rotated refresh token: `__Host-ql_refresh=…; HttpOnly; Secure; SameSite=Strict; Path=/`',
+    schema: { type: 'string' as const },
+  },
+};
+const authOk = (description: string) => ({ ...json(C.AuthResponse, description), headers: setsRefreshCookie });
+const rateLimited = err('RATE_LIMITED — see the Retry-After header');
+const badOrigin = err('FORBIDDEN_ORIGIN — browser request from another site');
+
 route('post', '/auth/register', {
   tags: ['Auth'],
-  summary: 'Create an account',
+  summary: 'Create an account and start a session',
   auth: false,
   request: body(C.RegisterBody),
   responses: {
-    201: json(C.AuthResponse, 'Account created; returns a JWT'),
+    201: authOk('Account created; returns an access token and sets the refresh cookie'),
     400: errors[400],
     409: err('EMAIL_TAKEN or USERNAME_TAKEN'),
+    429: rateLimited,
   },
 });
 route('post', '/auth/login', {
   tags: ['Auth'],
-  summary: 'Log in',
+  summary: 'Log in and start a session',
+  description: 'Limited to 20 attempts per IP and 5 failed attempts per account per 15 minutes.',
   auth: false,
   request: body(C.LoginBody),
   responses: {
-    200: json(C.AuthResponse, 'Logged in; returns a JWT'),
+    200: authOk('Logged in; returns an access token and sets the refresh cookie'),
     400: errors[400],
     401: err('INVALID_CREDENTIALS'),
+    429: rateLimited,
   },
+});
+route('post', '/auth/refresh', {
+  tags: ['Auth'],
+  summary: 'Rotate the refresh token and get a new access token',
+  description:
+    'Each refresh token works once. Presenting one that was already used revokes the whole ' +
+    'session (reuse detection), logging out both the legitimate user and whoever copied it.',
+  auth: false,
+  security: [{ [refreshCookie.name]: [] }],
+  responses: {
+    200: authOk('New access token; the refresh cookie is replaced'),
+    401: err('INVALID_REFRESH_TOKEN — missing, expired, revoked or reused; the cookie is cleared'),
+    403: badOrigin,
+    429: rateLimited,
+  },
+});
+route('post', '/auth/logout', {
+  tags: ['Auth'],
+  summary: "End this device's session",
+  description: 'Revokes the session behind the refresh cookie and clears it. Idempotent.',
+  auth: false,
+  security: [{ [refreshCookie.name]: [] }],
+  responses: { 204: noContent, 403: badOrigin },
+});
+route('post', '/auth/logout-all', {
+  tags: ['Auth'],
+  summary: 'End every session on every device',
+  responses: { 204: noContent },
 });
 route('get', '/auth/me', {
   tags: ['Auth'],
@@ -159,11 +209,6 @@ route('patch', '/auth/me', {
     400: errors[400],
     409: err('USERNAME_TAKEN'),
   },
-});
-route('post', '/auth/logout', {
-  tags: ['Auth'],
-  summary: 'Log out',
-  responses: { 204: noContent },
 });
 
 // ── Categories ───────────────────────────────────────────────────────────
@@ -345,7 +390,9 @@ export function buildOpenApiDocument() {
       version: '1.0.0',
       description:
         'REST API for QuestLog, a gamified habit tracker. Generated from the Zod schemas in ' +
-        '@questlog/shared. Authenticate with `Authorization: Bearer <token>` from /auth/login.',
+        '@questlog/shared.\n\n**Auth:** /auth/login returns a 15-minute access token (send it as ' +
+        '`Authorization: Bearer <token>`) and sets a rotating, HttpOnly refresh-token cookie. ' +
+        'Call /auth/refresh when the access token expires.',
     },
     servers: [{ url: '/' }],
   });

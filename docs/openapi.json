@@ -3,7 +3,7 @@
   "info": {
     "title": "QuestLog API",
     "version": "1.0.0",
-    "description": "REST API for QuestLog, a gamified habit tracker. Generated from the Zod schemas in @questlog/shared. Authenticate with `Authorization: Bearer <token>` from /auth/login."
+    "description": "REST API for QuestLog, a gamified habit tracker. Generated from the Zod schemas in @questlog/shared.\n\n**Auth:** /auth/login returns a 15-minute access token (send it as `Authorization: Bearer <token>`) and sets a rotating, HttpOnly refresh-token cookie. Call /auth/refresh when the access token expires."
   },
   "servers": [
     {
@@ -15,7 +15,14 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "Access token from /auth/login, /auth/register or /auth/refresh (15-minute lifetime)."
+      },
+      "refreshCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-ql_refresh",
+        "description": "HttpOnly, Secure, SameSite=Strict refresh-token cookie set by login/register/refresh (named `ql_refresh` outside production). Single-use: every refresh rotates it."
       }
     },
     "schemas": {
@@ -151,12 +158,18 @@
           "token": {
             "type": "string"
           },
+          "expiresIn": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
           "user": {
             "$ref": "#/components/schemas/User"
           }
         },
         "required": [
           "token",
+          "expiresIn",
           "user"
         ],
         "additionalProperties": false
@@ -1092,7 +1105,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Create an account",
+        "summary": "Create an account and start a session",
         "requestBody": {
           "required": true,
           "content": {
@@ -1105,7 +1118,15 @@
         },
         "responses": {
           "201": {
-            "description": "Account created; returns a JWT",
+            "description": "Account created; returns an access token and sets the refresh cookie",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Rotated refresh token: `__Host-ql_refresh=…; HttpOnly; Secure; SameSite=Strict; Path=/`",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -1133,6 +1154,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "RATE_LIMITED — see the Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1142,7 +1173,8 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Log in",
+        "summary": "Log in and start a session",
+        "description": "Limited to 20 attempts per IP and 5 failed attempts per account per 15 minutes.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1155,7 +1187,15 @@
         },
         "responses": {
           "200": {
-            "description": "Logged in; returns a JWT",
+            "description": "Logged in; returns an access token and sets the refresh cookie",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Rotated refresh token: `__Host-ql_refresh=…; HttpOnly; Secure; SameSite=Strict; Path=/`",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -1176,6 +1216,137 @@
           },
           "401": {
             "description": "INVALID_CREDENTIALS",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED — see the Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Rotate the refresh token and get a new access token",
+        "description": "Each refresh token works once. Presenting one that was already used revokes the whole session (reuse detection), logging out both the legitimate user and whoever copied it.",
+        "security": [
+          {
+            "refreshCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New access token; the refresh cookie is replaced",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Rotated refresh token: `__Host-ql_refresh=…; HttpOnly; Secure; SameSite=Strict; Path=/`",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "INVALID_REFRESH_TOKEN — missing, expired, revoked or reused; the cookie is cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN_ORIGIN — browser request from another site",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED — see the Retry-After header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "End this device's session",
+        "description": "Revokes the session behind the refresh cookie and clears it. Idempotent.",
+        "security": [
+          {
+            "refreshCookie": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "403": {
+            "description": "FORBIDDEN_ORIGIN — browser request from another site",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": [
+          "Auth"
+        ],
+        "summary": "End every session on every device",
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "description": "Missing or invalid bearer token",
             "content": {
               "application/json": {
                 "schema": {
@@ -1292,34 +1463,6 @@
           },
           "409": {
             "description": "USERNAME_TAKEN",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/logout": {
-      "post": {
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Log out",
-        "responses": {
-          "204": {
-            "description": "No content"
-          },
-          "401": {
-            "description": "Missing or invalid bearer token",
             "content": {
               "application/json": {
                 "schema": {

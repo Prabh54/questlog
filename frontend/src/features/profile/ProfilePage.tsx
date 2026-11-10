@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { DisplayNameSchema, TimezoneSchema } from '@questlog/shared';
-import { Flame, Trophy, Zap, Calendar, Mail, Save } from 'lucide-react';
+import { Flame, Trophy, Zap, Calendar, Mail, Save, ShieldCheck, LogOut } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -47,7 +47,8 @@ const profileSchema = z.object({
 type ProfileFields = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
-  const { user, updateMe } = useAuth();
+  const { user, updateMe, logoutAll } = useAuth();
+  const [signingOutAll, setSigningOutAll] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -223,6 +224,32 @@ export default function ProfilePage() {
               </Button>
             </div>
           </form>
+        </Card>
+
+        {/* ── Security ─────────────────────────────────────────────── */}
+        <Card className="lg:col-span-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
+              <div>
+                <h2 className="text-lg font-semibold text-surface-50">Sessions</h2>
+                <p className="mt-1 text-sm text-surface-400">
+                  Lost a device or used a shared computer? Sign out everywhere, including here.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              loading={signingOutAll}
+              onClick={async () => {
+                setSigningOutAll(true);
+                await logoutAll();
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out of all devices
+            </Button>
+          </div>
         </Card>
       </div>
     </div>

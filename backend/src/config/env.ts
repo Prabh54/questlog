@@ -27,6 +27,16 @@ const envSchema = z.object({
     .string()
     .default('http://localhost:5173')
     .transform((val) => val.split(',').map((s) => s.trim())),
+
+  // Shared with the web app's nginx, which proxies /api/* here and forwards the
+  // visitor's IP. The forwarded IP is trusted only when this secret matches.
+  PROXY_SECRET: z
+    .string()
+    .min(32, { message: 'PROXY_SECRET must be at least 32 characters' })
+    .optional(),
+
+  // Set by Fly.io on every machine; Fly's edge then sets an unforgeable Fly-Client-IP
+  FLY_APP_NAME: z.string().optional(),
 });
 
 const result = envSchema.safeParse(process.env);

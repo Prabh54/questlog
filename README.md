@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/9e326a3e-7f24-4c81-96be-22ceffa285be
 | Frontend | React 18, Vite, TypeScript, Tailwind CSS, TanStack Query, react-hook-form, Zod |
 | Backend | Node 20, Express, TypeScript, Prisma ORM, Zod validators |
 | Database | PostgreSQL 16 |
-| Auth | JWT (HS256), bcryptjs password hashing |
+| Auth | 15-min JWT access tokens (memory only) + rotating refresh tokens in HttpOnly cookies with reuse detection; bcrypt; rate limiting; helmet |
 | Shared | `@questlog/shared` workspace — Zod schemas for requests *and* responses, built as ESM + CJS with tsup |
 | API docs | OpenAPI 3 generated from those schemas (`@asteasolutions/zod-to-openapi`), Swagger UI at `/docs` |
 | Infra | Docker, Fly.io (3 apps: web + api + managed Postgres) |
@@ -27,32 +27,38 @@ https://github.com/user-attachments/assets/9e326a3e-7f24-4c81-96be-22ceffa285be
 ```mermaid
 flowchart LR
     Browser["Browser<br/>(React SPA)"]
-    Nginx["nginx<br/>(static files + SPA fallback)"]
-    API["Express API<br/>auth · validate · ownership"]
+    Nginx["nginx (web app)<br/>static files · SPA fallback<br/>/api/* reverse proxy"]
+    API["Express API<br/>helmet · rate limits · auth · validate"]
     DB[(PostgreSQL<br/>Prisma)]
 
-    Browser -- HTTPS --> Nginx
-    Browser -- "REST + JWT<br/>(Authorization: Bearer)" --> API
+    Browser -- "HTTPS, same origin" --> Nginx
+    Nginx -- "/api/* + X-Client-IP<br/>(trusted via shared secret)" --> API
     API -- Prisma Client --> DB
-
-    subgraph Middleware
-      M1[authMiddleware<br/>verifies JWT]
-      M2[validateMiddleware<br/>Zod schema check]
-      M3[ownershipMiddleware<br/>row-level access check]
-      M4[errorMiddleware<br/>typed ApiError handling]
-    end
-
-    API --> M1 --> M2 --> M3 --> M4
 ```
 
-**Request flow:** Browser sends `Authorization: Bearer <jwt>` → Express verifies the token, validates the request body against a Zod schema, checks the authenticated user owns the target row, then delegates to a service which calls Prisma.
+**Request flow:** the browser only ever talks to the web app's origin. nginx serves the SPA and proxies `/api/*` to the API, adding the visitor's IP for rate limiting. The API checks the `Authorization: Bearer` access token, validates the body and query with a shared Zod schema, enforces that the user owns the row (404 otherwise, never 403), then calls a service that uses Prisma.
+
+## Authentication
+
+| | Access token | Refresh token |
+|---|---|---|
+| Format | JWT (HS256, `iss`/`aud`/`sub`/`sid` claims, algorithm pinned) | 256-bit random, opaque |
+| Lifetime | 15 minutes | 7 days idle, 30 days absolute per session |
+| Lives in | JavaScript memory only, never `localStorage` | `HttpOnly; Secure; SameSite=Strict; __Host-` cookie |
+| Stored server-side | no (stateless) | SHA-256 hash only |
+
+- **Rotation with reuse detection.** Every `/auth/refresh` marks the presented token used and issues a new one in the same session. If a used token is ever presented again, someone has a copy of it, so the whole session is revoked. The claim is a single conditional `UPDATE`, so 5 parallel refreshes with one token give exactly one success (tested).
+- **Real logout.** `/auth/logout` revokes the session behind the cookie, and `/auth/logout-all` revokes every session ("Sign out of all devices" on the profile page). Access tokens are stateless, so revocation takes effect within at most 15 minutes, at the next refresh.
+- **Same-origin by design.** The API is reached through the web app's `/api` proxy, so the refresh cookie is first-party and can be `SameSite=Strict` (no Safari third-party-cookie breakage). `/auth/refresh` and `/auth/logout` also reject requests whose `Origin` isn't the web app (CSRF defence in depth).
+- **Client.** On a 401, the client refreshes once and retries. Concurrent requests share one refresh, and the Web Locks API serialises refreshes across tabs, so a legitimate client never trips reuse detection. Logging out in one tab logs out the others (BroadcastChannel).
+- **Rate limits** (`express-rate-limit`): login is limited to 20 attempts per IP and 5 failed attempts per account per 15 minutes, sign-up to 10 per IP per hour. All return `429` with `Retry-After`. The client IP comes from Fly's edge, or from nginx when the shared `PROXY_SECRET` matches. Client-supplied headers are never trusted.
 
 **The API contract lives in one place.** `@questlog/shared` holds a Zod schema for every request body, query string and response:
 
 - the API's `validate()` middleware parses bodies and query strings with them (bad input → `400 VALIDATION_FAILED` with per-field errors);
 - the web app's forms use the same rules (extended only with UI concerns like "confirm password"), and its API client is typed from the inferred response types;
 - the OpenAPI document at [`/docs`](https://questlog-api-snowy-seastar-7669.fly.dev/docs) and [`docs/openapi.json`](docs/openapi.json) is generated from them;
-- **contract tests** call all 25 endpoints against a real Postgres and parse every response with its documented schema (response schemas are `.strict()`, so a missing *or* extra field fails), assert that every documented operation was exercised, and assert that Express and the document list exactly the same routes. CI also fails if `docs/openapi.json` is stale.
+- **contract tests** call all 27 endpoints against a real Postgres and parse every response with its documented schema (response schemas are `.strict()`, so a missing *or* extra field fails), assert that every documented operation was exercised, and assert that Express and the document list exactly the same routes. CI also fails if `docs/openapi.json` is stale.
 
 ## Features
 
@@ -62,7 +68,7 @@ flowchart LR
 - **Dashboard** — today's quests, XP progress bar, 30-day completion chart, 365-day consistency heatmap, recent activity feed, top-line stats with colored accents.
 - **Analytics** — completion trend, category breakdown.
 - **History** — paginated entries with cursor-based pagination.
-- **25 REST endpoints** across auth, quests, categories, entries, dashboard, analytics — browse them at `/docs`.
+- **27 REST endpoints** across auth, quests, categories, entries, dashboard, analytics — browse them at `/docs`.
 
 ## Local development
 
@@ -108,7 +114,8 @@ After changing a schema or route, regenerate the API spec: `npm run openapi --wo
 | `JWT_SECRET` | yes | — | ≥ 32 characters |
 | `PORT` | no | `3001` | |
 | `NODE_ENV` | no | `development` | `development` \| `production` \| `test` |
-| `CORS_ORIGIN` | no | `http://localhost:5173` | comma-separated list |
+| `CORS_ORIGIN` | no | `http://localhost:5173` | comma-separated list; also the allowed `Origin`s for `/auth/refresh` and `/auth/logout` |
+| `PROXY_SECRET` | no | — | ≥ 32 chars; must match the web app's. Lets the API trust the visitor IP that nginx forwards |
 
 Validated at boot via Zod ([`backend/src/config/env.ts`](backend/src/config/env.ts)) — the server refuses to start with a bad config.
 
@@ -116,7 +123,10 @@ Validated at boot via Zod ([`backend/src/config/env.ts`](backend/src/config/env.
 
 | Var | Required | Default | Notes |
 |---|---|---|---|
-| `VITE_API_URL` | yes | — | e.g. `http://localhost:3001` or the deployed API URL |
+| `VITE_API_URL` | no | `/api` | Leave unset: the API is reached same-origin through the Vite (dev) or nginx (prod) proxy |
+| `API_PROXY_TARGET` | no | `http://localhost:3001` | Dev only: where Vite proxies `/api` |
+
+The production web container's nginx reads `API_UPSTREAM` (the API's URL) and `PROXY_SECRET` at startup.
 
 ## Project layout
 
@@ -143,7 +153,16 @@ flyctl deploy --config fly.backend.toml
 flyctl deploy --config fly.frontend.toml
 ```
 
-`VITE_API_URL` is passed as a Docker build arg in [`fly.frontend.toml`](fly.frontend.toml) so the API URL is baked into the production JS bundle.
+One-time setup: give both apps the same proxy secret, and make sure the API allows the web origin:
+
+```bash
+SECRET=$(openssl rand -hex 32)
+flyctl secrets set PROXY_SECRET=$SECRET --app questlog-api-snowy-seastar-7669 --stage
+flyctl secrets set PROXY_SECRET=$SECRET --app questlog-web --stage
+flyctl secrets set CORS_ORIGIN=https://questlog-web.fly.dev --app questlog-api-snowy-seastar-7669 --stage
+```
+
+Deploy the API first (it runs migrations on boot), then the web app. The web app's nginx proxies `/api/*` to `API_UPSTREAM` from [`fly.frontend.toml`](fly.frontend.toml).
 
 ## CI
 
