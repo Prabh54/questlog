@@ -1,14 +1,18 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { prisma } from '../db/prisma';
-import { env } from '../config/env';
 import { AppError, Errors } from '../lib/errors';
 import type { LoginBody, RegisterBody, UpdateMeBody } from '@questlog/shared';
 import { getUserTotalXp } from './entry.service';
 import { levelProgress } from './xp.service';
+import { ACCESS_TOKEN_TTL_SECONDS, signAccessToken } from '../lib/tokens';
+import {
+  createSession,
+  invalidRefreshToken,
+  rotateRefreshToken,
+  type IssuedRefreshToken,
+} from './session.service';
 
 const BCRYPT_ROUNDS = 12;
-const JWT_EXPIRES_IN = '7d';
 
 // XP / level are derived from the user's entries (the single source of truth)
 const safeUser = async (user: {
@@ -36,11 +40,25 @@ const safeUser = async (user: {
   };
 };
 
-function signToken(id: string, email: string): string {
-  return jwt.sign({ id, email }, env.JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+export interface AuthResult {
+  /** Response body: short-lived access token + the user */
+  body: { token: string; expiresIn: number; user: Awaited<ReturnType<typeof safeUser>> };
+  /** Goes into the HttpOnly cookie, never the body */
+  refresh: IssuedRefreshToken;
 }
 
-export async function register(body: RegisterBody) {
+async function authResult(
+  user: Parameters<typeof safeUser>[0],
+  refresh: IssuedRefreshToken,
+): Promise<AuthResult> {
+  const token = signAccessToken({ userId: user.id, email: user.email, sessionId: refresh.sessionId });
+  return {
+    body: { token, expiresIn: ACCESS_TOKEN_TTL_SECONDS, user: await safeUser(user) },
+    refresh,
+  };
+}
+
+export async function register(body: RegisterBody, userAgent?: string): Promise<AuthResult> {
   const email = body.email.toLowerCase();
 
   const existing = await prisma.user.findFirst({
@@ -57,10 +75,10 @@ export async function register(body: RegisterBody) {
     data: { email, username: body.display_name, password },
   });
 
-  return { token: signToken(user.id, user.email), user: await safeUser(user) };
+  return authResult(user, await createSession(user.id, userAgent));
 }
 
-export async function login(body: LoginBody) {
+export async function login(body: LoginBody, userAgent?: string): Promise<AuthResult> {
   const email = body.email.toLowerCase();
   const user = await prisma.user.findUnique({ where: { email } });
 
@@ -72,7 +90,15 @@ export async function login(body: LoginBody) {
     throw new AppError('INVALID_CREDENTIALS', 401, 'Invalid email or password');
   }
 
-  return { token: signToken(user.id, user.email), user: await safeUser(user) };
+  return authResult(user, await createSession(user.id, userAgent));
+}
+
+/** Rotates the refresh token and mints a new access token. */
+export async function refresh(presentedToken: string): Promise<AuthResult> {
+  const issued = await rotateRefreshToken(presentedToken);
+  const user = await prisma.user.findUnique({ where: { id: issued.userId } });
+  if (!user) throw invalidRefreshToken();
+  return authResult(user, issued);
 }
 
 export async function getMe(userId: string) {

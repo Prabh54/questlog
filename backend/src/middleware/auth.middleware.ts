@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { env } from '../config/env';
 import { Errors } from '../lib/errors';
+import { verifyAccessToken } from '../lib/tokens';
 
-interface JwtPayload {
-  id: string;
-  email: string;
-}
-
+/**
+ * Requires `Authorization: Bearer <access token>`. Access tokens are
+ * stateless and live 15 minutes; revocation takes effect when the client next
+ * tries to refresh. That window is the trade-off for not hitting the database
+ * on every request.
+ */
 export const authMiddleware = (req: Request, _res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
@@ -15,10 +15,9 @@ export const authMiddleware = (req: Request, _res: Response, next: NextFunction)
     return;
   }
 
-  const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
-    req.user = { id: payload.id, email: payload.email };
+    const { userId, email, sessionId } = verifyAccessToken(authHeader.slice(7));
+    req.user = { id: userId, email, sessionId };
     next();
   } catch {
     next(Errors.unauthorized());

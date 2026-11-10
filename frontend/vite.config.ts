@@ -7,8 +7,9 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      // Same-origin API in development, mirroring nginx in production
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.API_PROXY_TARGET ?? 'http://localhost:3001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
