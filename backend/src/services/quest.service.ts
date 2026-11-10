@@ -1,8 +1,8 @@
 import { Prisma, QuestStatus } from '@prisma/client';
-import { formatInTimeZone } from 'date-fns-tz';
 import { prisma } from '../db/prisma';
 import { Errors } from '../lib/errors';
-import { calculateStreak } from './streak.service';
+import { EMPTY_STREAK, completedDays, streakStats } from './stats.queries';
+import { addDays, localBuckets, localDate } from '../utils/local-buckets';
 import type {
   CreateQuestBody,
   ListQuestsQuery,
@@ -10,62 +10,56 @@ import type {
 } from '@questlog/shared';
 
 // ── Shape returned to the client ─────────────────────────────────────────
-type StripDay = { date: string; completed: boolean };
-
 const STRIP_DAYS = 14;
 
-/** Build the last-14-days strip (binary: completed or not) in user's TZ. */
-function buildStrip(
-  entries: { completedAt: Date }[],
-  timezone: string,
-  now = new Date(),
-): StripDay[] {
-  const days = new Set<string>();
-  for (const e of entries) {
-    days.add(formatInTimeZone(e.completedAt, timezone, 'yyyy-MM-dd'));
-  }
+type QuestWithCategory = Prisma.QuestGetPayload<{ include: { category: true } }>;
 
-  const strip: StripDay[] = [];
-  for (let i = STRIP_DAYS - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setUTCDate(d.getUTCDate() - i);
-    const key = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
-    strip.push({ date: key, completed: days.has(key) });
-  }
-  return strip;
+/**
+ * Adds streak stats and the 14-day strip to quests. Two aggregate queries for
+ * the whole list, instead of loading every completion of every quest (Prisma
+ * applies a nested `take` in memory, after fetching all rows).
+ */
+async function decorate(quests: QuestWithCategory[], userId: string, timezone: string) {
+  const now = new Date();
+  const ids = quests.map((q) => q.id);
+  // The 14-day strip: the last 14 local days, oldest first
+  const today = localDate(now, timezone);
+  const stripDays = localBuckets('day', timezone, addDays(today, -(STRIP_DAYS - 1)), today);
+  const [streaks, recentDays] = await Promise.all([
+    streakStats(userId, timezone, ids, now),
+    completedDays(userId, ids, stripDays),
+  ]);
+
+  return quests.map((quest) => {
+    const { current, longest, totalCompletions } = streaks.get(quest.id) ?? EMPTY_STREAK;
+    return {
+      id: quest.id,
+      title: quest.title,
+      description: quest.description,
+      status: quest.status,
+      difficulty: quest.difficulty,
+      frequency: quest.frequency,
+      xp_reward: quest.xpReward,
+      is_active: quest.status === 'ACTIVE',
+      due_date: quest.dueDate,
+      completed_at: quest.completedAt,
+      category: quest.category,
+      streak: current,
+      longest_streak: longest,
+      total_completions: totalCompletions,
+      strip: stripDays.keys.map((date) => ({
+        date,
+        completed: recentDays.get(quest.id)?.has(date) ?? false,
+      })),
+      created_at: quest.createdAt,
+      updated_at: quest.updatedAt,
+    };
+  });
 }
 
-type QuestWithRelations = Prisma.QuestGetPayload<{
-  include: { category: true; entries: { take: number; orderBy: { completedAt: 'desc' } } };
-}>;
-
-function decorate(quest: QuestWithRelations, timezone: string) {
-  const strip = buildStrip(quest.entries, timezone);
-  const { current: streak, longest, totalCompletions } = calculateStreak(
-    quest.entries,
-    quest.frequency,
-    timezone,
-  );
-
-  return {
-    id: quest.id,
-    title: quest.title,
-    description: quest.description,
-    status: quest.status,
-    difficulty: quest.difficulty,
-    frequency: quest.frequency,
-    xp_reward: quest.xpReward,
-    is_active: quest.status === 'ACTIVE',
-    due_date: quest.dueDate,
-    completed_at: quest.completedAt,
-    category: quest.category,
-    streak,
-    longest_streak: longest,
-    total_completions: totalCompletions,
-    strip,
-    created_at: quest.createdAt,
-    updated_at: quest.updatedAt,
-  };
+async function decorateOne(quest: QuestWithCategory, userId: string, timezone: string) {
+  const [decorated] = await decorate([quest], userId, timezone);
+  return decorated;
 }
 
 async function getTimezone(userId: string): Promise<string> {
@@ -103,14 +97,11 @@ export async function listQuests(userId: string, query: ListQuestsQuery) {
     prisma.quest.findMany({
       where,
       orderBy,
-      include: {
-        category: true,
-        entries: { orderBy: { completedAt: 'desc' }, take: 60 },
-      },
+      include: { category: true },
     }),
   ]);
 
-  return quests.map((q) => decorate(q, timezone));
+  return decorate(quests, userId, timezone);
 }
 
 // ── Get one ───────────────────────────────────────────────────────────────
@@ -119,15 +110,11 @@ export async function getQuestById(questId: string, userId: string) {
     getTimezone(userId),
     prisma.quest.findUnique({
       where: { id: questId },
-      include: {
-        category: true,
-        // All entries, so the detail page's streaks and total aren't capped
-        entries: { orderBy: { completedAt: 'desc' } },
-      },
+      include: { category: true },
     }),
   ]);
   if (!quest || quest.userId !== userId) throw Errors.notFound('Quest');
-  return decorate(quest, timezone);
+  return decorateOne(quest, userId, timezone);
 }
 
 // ── Create ────────────────────────────────────────────────────────────────
@@ -150,13 +137,10 @@ export async function createQuest(userId: string, body: CreateQuestBody) {
         categoryId: body.category_id ?? null,
         status: body.is_active ? QuestStatus.ACTIVE : QuestStatus.PAUSED,
       },
-      include: {
-        category: true,
-        entries: { orderBy: { completedAt: 'desc' }, take: 60 },
-      },
+      include: { category: true },
     }),
   ]);
-  return decorate(quest, timezone);
+  return decorateOne(quest, userId, timezone);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────
@@ -196,13 +180,10 @@ export async function updateQuest(
         categoryId: body.category_id === undefined ? undefined : body.category_id,
         ...(nextStatus && { status: nextStatus }),
       },
-      include: {
-        category: true,
-        entries: { orderBy: { completedAt: 'desc' }, take: 60 },
-      },
+      include: { category: true },
     }),
   ]);
-  return decorate(quest, timezone);
+  return decorateOne(quest, userId, timezone);
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────
@@ -222,13 +203,10 @@ async function setStatus(questId: string, userId: string, status: QuestStatus) {
     prisma.quest.update({
       where: { id: questId },
       data: { status },
-      include: {
-        category: true,
-        entries: { orderBy: { completedAt: 'desc' }, take: 60 },
-      },
+      include: { category: true },
     }),
   ]);
-  return decorate(quest, timezone);
+  return decorateOne(quest, userId, timezone);
 }
 
 export const archiveQuest = (questId: string, userId: string) =>

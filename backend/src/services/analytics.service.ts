@@ -1,9 +1,16 @@
-import { formatInTimeZone } from 'date-fns-tz';
 import { prisma } from '../db/prisma';
 import { Errors } from '../lib/errors';
 import { todayBoundaries } from '../utils/dates';
-import { calculateStreak, type Frequency } from './streak.service';
+import type { Frequency } from './streak.service';
 import { calculateLevel, levelProgress } from './xp.service';
+import {
+  EMPTY_STREAK,
+  streakStats,
+  totalsByBucket,
+  totalsByCategory,
+  xpBefore,
+} from './stats.queries';
+import { localBuckets, localDate } from '../utils/local-buckets';
 
 // ╔═══ Dashboard summary ═══════════════════════════════════════════════════╗
 
@@ -63,18 +70,13 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
   const todayCompletionPct =
     dailyQuests.length > 0 ? Math.round((dailyDone / dailyQuests.length) * 100) : 0;
 
+  const streaks = await streakStats(
+    userId,
+    timezone,
+    activeQuests.map((q: typeof activeQuests[0]) => q.id),
+  );
   let bestStreak = 0;
-  if (activeQuests.length > 0) {
-    const byQuest = await loadEntriesGroupedByQuest(userId, activeQuests.map((q: typeof activeQuests[0]) => q.id));
-    for (const q of activeQuests) {
-      const { current } = calculateStreak(
-        byQuest.get(q.id) ?? [],
-        q.frequency,
-        timezone,
-      );
-      if (current > bestStreak) bestStreak = current;
-    }
-  }
+  for (const { current } of streaks.values()) bestStreak = Math.max(bestStreak, current);
 
   return {
     totalXp,
@@ -134,24 +136,15 @@ export async function getCompletionTimeSeries(
     startDate.setUTCDate(startDate.getUTCDate() - (RANGE_DAYS[range] - 1));
   }
 
-  const { start: fromUtc } = todayBoundaries(timezone, startDate);
+  const buckets = localBuckets(
+    bucket,
+    timezone,
+    localDate(startDate, timezone),
+    localDate(new Date(), timezone),
+  );
+  const totals = await totalsByBucket(userId, buckets);
 
-  const rows = await prisma.questEntry.findMany({
-    where: { userId, completedAt: { gte: fromUtc } },
-    select: { completedAt: true },
-    orderBy: { completedAt: 'asc' },
-  });
-
-  const counts = new Map<string, number>();
-  for (const r of rows) {
-    const key = bucketKey(r.completedAt, bucket, timezone);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-
-  const series = enumerateSlots(fromUtc, new Date(), bucket, timezone).map((date) => ({
-    date,
-    count: counts.get(date) ?? 0,
-  }));
+  const series = buckets.keys.map((date) => ({ date, count: totals.get(date)?.count ?? 0 }));
 
   return { range, bucket, series };
 }
@@ -184,16 +177,12 @@ export async function getStreakSummary(userId: string): Promise<{
     return { quests: [], best: { current: 0, longest: 0 } };
   }
 
-  const byQuest = await loadEntriesGroupedByQuest(userId, quests.map((q: typeof quests[0]) => q.id));
+  const streaks = await streakStats(userId, timezone);
 
   let bestCurrent = 0;
   let bestLongest = 0;
   const result: PerQuestStreak[] = quests.map((q: typeof quests[0]) => {
-    const { current, longest, totalCompletions } = calculateStreak(
-      byQuest.get(q.id) ?? [],
-      q.frequency,
-      timezone,
-    );
+    const { current, longest, totalCompletions } = streaks.get(q.id) ?? EMPTY_STREAK;
     if (current > bestCurrent) bestCurrent = current;
     if (longest > bestLongest) bestLongest = longest;
     return {
@@ -226,44 +215,20 @@ export async function getCategoryBreakdown(userId: string): Promise<{
   categories: CategoryBreakdownRow[];
   total: number;
 }> {
-  const entries = await prisma.questEntry.findMany({
-    where: { userId },
-    select: {
-      xpEarned: true,
-      quest: {
-        select: { category: { select: { id: true, name: true, color: true } } },
-      },
-    },
-  });
+  const rows = await totalsByCategory(userId);
+  const total = rows.reduce((sum, r) => sum + r.completions, 0);
 
-  type Agg = { name: string; color: string; completions: number; xp: number };
-  const map = new Map<string, Agg>();
-
-  for (const e of entries) {
-    const cat = e.quest.category;
-    const key = cat?.id ?? '__none__';
-    const existing = map.get(key) ?? {
-      name: cat?.name ?? 'Uncategorized',
-      color: cat?.color ?? '#475569',
-      completions: 0,
-      xp: 0,
-    };
-    existing.completions += 1;
-    existing.xp += e.xpEarned;
-    map.set(key, existing);
-  }
-
-  const total = entries.length;
-  const categories: CategoryBreakdownRow[] = [...map.entries()]
-    .map(([key, agg]) => ({
-      categoryId: key === '__none__' ? null : key,
-      name: agg.name,
-      color: agg.color,
-      completions: agg.completions,
-      xp: agg.xp,
-      pctOfTotal: total > 0 ? Math.round((agg.completions / total) * 1000) / 10 : 0,
+  const categories: CategoryBreakdownRow[] = rows
+    .map((r) => ({
+      categoryId: r.category_id,
+      name: r.name ?? 'Uncategorized',
+      color: r.color ?? '#475569',
+      completions: r.completions,
+      xp: r.xp,
+      pctOfTotal: total > 0 ? Math.round((r.completions / total) * 1000) / 10 : 0,
     }))
-    .sort((a, b) => b.completions - a.completions);
+    // Ties broken by name so the order is deterministic
+    .sort((a, b) => b.completions - a.completions || a.name.localeCompare(b.name));
 
   return { categories, total };
 }
@@ -290,43 +255,37 @@ export async function getXpTimeSeries(
 ): Promise<XpTimeSeriesResult> {
   const timezone = await loadTimezone(userId);
 
-  // Need every prior entry to compute the cumulative baseline at range start
-  const allEntries = await prisma.questEntry.findMany({
+  const first = await prisma.questEntry.findFirst({
     where: { userId },
-    select: { completedAt: true, xpEarned: true },
     orderBy: { completedAt: 'asc' },
+    select: { completedAt: true },
   });
-  if (allEntries.length === 0) return { range, bucket, series: [] };
+  if (!first) return { range, bucket, series: [] };
 
   let startDate: Date;
   if (range === 'all') {
-    startDate = allEntries[0].completedAt;
+    startDate = first.completedAt;
   } else {
     const now = new Date();
     startDate = new Date(now);
     startDate.setUTCDate(startDate.getUTCDate() - (RANGE_DAYS[range] - 1));
   }
-  const { start: fromUtc } = todayBoundaries(timezone, startDate);
-
-  // Carry-over: XP earned before the visible range starts
-  let cumulative = 0;
-  const xpByBucket = new Map<string, number>();
-  for (const e of allEntries) {
-    if (e.completedAt < fromUtc) {
-      cumulative += e.xpEarned;
-      continue;
-    }
-    const key = bucketKey(e.completedAt, bucket, timezone);
-    xpByBucket.set(key, (xpByBucket.get(key) ?? 0) + e.xpEarned);
-  }
-
-  const series: XpTimeSeriesPoint[] = enumerateSlots(
-    fromUtc,
-    new Date(),
+  const buckets = localBuckets(
     bucket,
     timezone,
-  ).map((key) => {
-    const earned = xpByBucket.get(key) ?? 0;
+    localDate(startDate, timezone),
+    localDate(new Date(), timezone),
+  );
+
+  // Carry-over: XP earned before the visible range starts
+  const [baseline, totals] = await Promise.all([
+    xpBefore(userId, buckets.starts[0]),
+    totalsByBucket(userId, buckets),
+  ]);
+
+  let cumulative = baseline;
+  const series: XpTimeSeriesPoint[] = buckets.keys.map((key) => {
+    const earned = totals.get(key)?.xp ?? 0;
     cumulative += earned;
     return { date: key, xp: earned, cumulativeXp: cumulative, level: calculateLevel(cumulative) };
   });
@@ -343,51 +302,4 @@ async function loadTimezone(userId: string): Promise<string> {
   });
   if (!user) throw Errors.notFound('User');
   return user.timezone;
-}
-
-async function loadEntriesGroupedByQuest(
-  userId: string,
-  questIds: string[],
-): Promise<Map<string, { completedAt: Date }[]>> {
-  const all = await prisma.questEntry.findMany({
-    where: { userId, questId: { in: questIds } },
-    select: { questId: true, completedAt: true },
-    orderBy: { completedAt: 'desc' },
-  });
-  const map = new Map<string, { completedAt: Date }[]>();
-  for (const e of all) {
-    const list = map.get(e.questId) ?? [];
-    list.push({ completedAt: e.completedAt });
-    map.set(e.questId, list);
-  }
-  return map;
-}
-
-function bucketKey(date: Date, bucket: Bucket, tz: string): string {
-  if (bucket === 'week') {
-    // Monday of the ISO week containing `date`, as YYYY-MM-DD
-    const yyyymmdd = formatInTimeZone(date, tz, 'yyyy-MM-dd');
-    const [y, m, d] = yyyymmdd.split('-').map(Number);
-    const anchor = new Date(Date.UTC(y, m - 1, d));
-    const jsDay = anchor.getUTCDay(); // 0=Sun..6=Sat
-    const back = jsDay === 0 ? 6 : jsDay - 1;
-    anchor.setUTCDate(anchor.getUTCDate() - back);
-    return anchor.toISOString().slice(0, 10);
-  }
-  return formatInTimeZone(date, tz, 'yyyy-MM-dd');
-}
-
-function enumerateSlots(from: Date, until: Date, bucket: Bucket, tz: string): string[] {
-  const slots: string[] = [];
-  const seen = new Set<string>();
-  const cursor = new Date(from);
-  while (cursor <= until) {
-    const key = bucketKey(cursor, bucket, tz);
-    if (!seen.has(key)) {
-      seen.add(key);
-      slots.push(key);
-    }
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-  return slots;
 }
