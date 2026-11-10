@@ -4,7 +4,7 @@ import { validate } from '../middleware/validate.middleware';
 import {
   CreateCategorySchema,
   UpdateCategorySchema,
-} from '../validators/category.validators';
+} from '@questlog/shared';
 import * as categoryController from '../controllers/category.controller';
 
 const router = Router();
