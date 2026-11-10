@@ -14,6 +14,9 @@ RUN npm run build --workspace=frontend
 
 FROM nginx:alpine AS runner
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# The nginx entrypoint renders templates/*.template into conf.d/ with envsubst
+COPY frontend/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+ENV API_UPSTREAM=http://localhost:3001
+ENV PROXY_SECRET=
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

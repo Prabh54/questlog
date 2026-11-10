@@ -75,7 +75,18 @@ export const UserSchema = z
   .strict();
 export type User = z.infer<typeof UserSchema>;
 
-export const AuthResponseSchema = z.object({ token: z.string(), user: UserSchema }).strict();
+/**
+ * Login / register / refresh. The refresh token is NOT in the body: it is set
+ * as an HttpOnly cookie. `token` is the access token; keep it in memory only.
+ */
+export const AuthResponseSchema = z
+  .object({
+    token: z.string(),
+    /** Access-token lifetime in seconds */
+    expiresIn: z.number().int().positive(),
+    user: UserSchema,
+  })
+  .strict();
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 
 export const UserResponseSchema = z.object({ user: UserSchema }).strict();
