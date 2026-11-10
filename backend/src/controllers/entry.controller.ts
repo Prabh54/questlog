@@ -1,9 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as entryService from '../services/entry.service';
-import {
-  FeedQuerySchema,
-  type CompleteQuestBody,
-} from '../validators/entry.validators';
+import type { CompleteQuestBody, FeedQuery } from '@questlog/shared';
 
 export const complete = async (
   req: Request<{ id: string }, object, CompleteQuestBody>,
@@ -20,7 +17,7 @@ export const complete = async (
 
 export const feed = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const query = FeedQuerySchema.parse(req.query);
+    const query = req.query as unknown as FeedQuery; // validated by route
     const result = await entryService.getEntryFeed(req.user!.id, query);
     res.json(result);
   } catch (err) {

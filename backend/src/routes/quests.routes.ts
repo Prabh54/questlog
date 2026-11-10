@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
 import {
+  CompleteQuestSchema,
   CreateQuestSchema,
+  ListQuestsQuerySchema,
   UpdateQuestSchema,
-} from '../validators/quest.validators';
-import { CompleteQuestSchema } from '../validators/entry.validators';
+} from '@questlog/shared';
 import * as questController from '../controllers/quest.controller';
 import * as entryController from '../controllers/entry.controller';
 
@@ -22,7 +23,7 @@ router.use(authMiddleware);
 // 15. POST   /quests/:id/unarchive — unarchive
 // 16. POST   /quests/:id/complete  — log a completion entry
 
-router.get('/', questController.list);
+router.get('/', validate(ListQuestsQuerySchema, 'query'), questController.list);
 router.post('/', validate(CreateQuestSchema), questController.create);
 router.get('/:id', questController.getById);
 router.patch('/:id', validate(UpdateQuestSchema), questController.update);

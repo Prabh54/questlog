@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { DisplayNameSchema, TimezoneSchema } from '@questlog/shared';
 import { Flame, Trophy, Zap, Calendar, Mail, Save } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -38,13 +39,10 @@ const COMMON_TIMEZONES = [
   'Pacific/Auckland',
 ] as const;
 
+// Field rules shared with PATCH /auth/me (the form requires both fields)
 const profileSchema = z.object({
-  display_name: z
-    .string()
-    .min(3, 'At least 3 characters')
-    .max(30, 'At most 30 characters')
-    .regex(/^[a-zA-Z0-9_-]+$/, 'Letters, numbers, _ and - only'),
-  timezone: z.string().min(1, 'Pick a timezone'),
+  display_name: DisplayNameSchema,
+  timezone: TimezoneSchema,
 });
 type ProfileFields = z.infer<typeof profileSchema>;
 
