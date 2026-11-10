@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth.service';
-import type { RegisterBody, LoginBody } from '../validators/auth.validators';
-import type { UpdateMeBody } from '../validators/user.validators';
+import type { LoginBody, RegisterBody, UpdateMeBody } from '@questlog/shared';
 
 export const register = async (
   req: Request<object, object, RegisterBody>,

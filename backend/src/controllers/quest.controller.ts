@@ -1,14 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import * as questService from '../services/quest.service';
-import {
-  ListQuestsQuerySchema,
-  type CreateQuestBody,
-  type UpdateQuestBody,
-} from '../validators/quest.validators';
+import type { CreateQuestBody, ListQuestsQuery, UpdateQuestBody } from '@questlog/shared';
 
 export const list = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const query = ListQuestsQuerySchema.parse(req.query);
+    const query = req.query as unknown as ListQuestsQuery; // validated by route
     const quests = await questService.listQuests(req.user!.id, query);
     res.json({ quests });
   } catch (err) {

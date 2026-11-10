@@ -1,39 +1,19 @@
+import type {
+  AuthResponse,
+  LoginBody,
+  RegisterBody,
+  UpdateMeBody,
+  User,
+  UserResponse,
+} from '@questlog/shared';
 import { api } from '../lib/api';
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  username: string;
-  role: string;
-  xp: number;
-  level: number;
-  xpToNext: number;
-  progress: number; // 0..1 through the current level
-  timezone: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: AuthUser;
-}
-
-export interface RegisterPayload {
-  display_name: string;
-  email: string;
-  password: string;
-}
-
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-export interface UpdateMePayload {
-  display_name?: string;
-  timezone?: string;
-}
+// Wire types come from @questlog/shared — the same Zod schemas the API validates with.
+export type AuthUser = User;
+export type { AuthResponse };
+export type RegisterPayload = RegisterBody;
+export type LoginPayload = LoginBody;
+export type UpdateMePayload = UpdateMeBody;
 
 export const authApi = {
   register: (payload: RegisterPayload) =>
@@ -42,10 +22,10 @@ export const authApi = {
   login: (payload: LoginPayload) =>
     api.post<AuthResponse>('/auth/login', payload),
 
-  getMe: () => api.get<{ user: AuthUser }>('/auth/me'),
+  getMe: () => api.get<UserResponse>('/auth/me'),
 
   updateMe: (payload: UpdateMePayload) =>
-    api.patch<{ user: AuthUser }>('/auth/me', payload),
+    api.patch<UserResponse>('/auth/me', payload),
 
   logout: () => api.post<void>('/auth/logout'),
 };

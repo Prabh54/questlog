@@ -27,6 +27,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/backend/dist ./dist
 COPY --from=build /app/backend/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+# @questlog/shared is a workspace symlink (node_modules/@questlog/shared -> ../../shared)
+COPY --from=build /app/shared/package.json ./shared/package.json
+COPY --from=build /app/shared/dist ./shared/dist
 COPY backend/start.sh ./start.sh
 RUN chmod +x start.sh
 

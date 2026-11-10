@@ -1,14 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
+import type { TimeSeriesQuery } from '@questlog/shared';
 import * as analytics from '../services/analytics.service';
-
-const RangeSchema = z.enum(['7d', '30d', '90d', '365d', 'all']).default('30d');
-const BucketSchema = z.enum(['day', 'week']).default('day');
-
-const TimeSeriesQuerySchema = z.object({
-  range: RangeSchema,
-  bucket: BucketSchema,
-});
 
 export const dashboardSummary = async (
   req: Request,
@@ -28,7 +20,7 @@ export const completionTimeSeries = async (
   next: NextFunction,
 ) => {
   try {
-    const { range, bucket } = TimeSeriesQuerySchema.parse(req.query);
+    const { range, bucket } = req.query as unknown as TimeSeriesQuery; // validated by route
     res.json(await analytics.getCompletionTimeSeries(req.user!.id, range, bucket));
   } catch (err) {
     next(err);
@@ -65,7 +57,7 @@ export const xpTimeSeries = async (
   next: NextFunction,
 ) => {
   try {
-    const { range, bucket } = TimeSeriesQuerySchema.parse(req.query);
+    const { range, bucket } = req.query as unknown as TimeSeriesQuery; // validated by route
     res.json(await analytics.getXpTimeSeries(req.user!.id, range, bucket));
   } catch (err) {
     next(err);

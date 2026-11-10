@@ -53,6 +53,9 @@ jobs:
       - name: Install all workspace dependencies
         run: npm ci
 
+      - name: Build shared contract package
+        run: npm run build --workspace=@questlog/shared
+
       - name: Generate Prisma client
         working-directory: backend
         run: npx prisma generate
@@ -68,6 +71,15 @@ jobs:
       - name: Typecheck
         working-directory: backend
         run: npm run typecheck
+
+      - name: OpenAPI spec is up to date
+        working-directory: backend
+        run: |
+          npm run openapi
+          git diff --exit-code -- ../docs/openapi.json || {
+            echo "::error::docs/openapi.json is stale — run 'npm run openapi -w @questlog/backend' and commit it"
+            exit 1
+          }
 
       - name: Test (with coverage)
         working-directory: backend
@@ -98,6 +110,9 @@ jobs:
       - name: Install all workspace dependencies
         run: npm ci
 
+      - name: Build shared contract package
+        run: npm run build --workspace=@questlog/shared
+
       - name: Lint
         working-directory: frontend
         run: npm run lint
@@ -112,7 +127,7 @@ jobs:
 
   # ── Shared ────────────────────────────────────────────────────────────────
   shared:
-    name: Shared (typecheck)
+    name: Shared (typecheck · build)
     runs-on: ubuntu-latest
 
     steps:
@@ -130,3 +145,7 @@ jobs:
       - name: Typecheck
         working-directory: shared
         run: npm run typecheck
+
+      - name: Build (ESM + CJS + types)
+        working-directory: shared
+        run: npm run build

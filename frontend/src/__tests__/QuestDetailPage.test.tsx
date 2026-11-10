@@ -34,6 +34,7 @@ const baseQuest: Quest = {
     description: null,
     color: '#3d69b7',
     icon: null,
+    userId: 'user-1',
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
   },
@@ -52,8 +53,10 @@ function makeEntry(id: string, completedAt: Date): QuestEntry {
     userId: 'user-1',
     xpEarned: 25,
     note: null,
+    periodKey: completedAt.toISOString().slice(0, 10),
     completedAt: completedAt.toISOString(),
     createdAt: completedAt.toISOString(),
+    updatedAt: completedAt.toISOString(),
     quest: {
       id: baseQuest.id,
       title: baseQuest.title,

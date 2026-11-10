@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import {
+  CreateQuestSchema,
+  QUEST_DESCRIPTION_MAX,
+  QuestDifficultySchema,
+  QuestFrequencySchema,
+  XP_REWARD_MAX,
+  XP_REWARD_MIN,
+  XpRewardSchema,
+} from '@questlog/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
@@ -15,14 +24,15 @@ import {
 } from '../../services/quests.api';
 import { ApiError } from '../../lib/api';
 
-// ── Schema (form-level; coerces strings from <select> back to enums) ─────
-const questFormSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
-  description: z.string().max(2000).optional(),
+// ── Schema: the API's CreateQuestSchema, adapted for HTML inputs ─────────
+// Same rules as the server; only the input shapes differ (the range input
+// yields a string, an empty <select> yields '').
+const questFormSchema = CreateQuestSchema.extend({
+  description: z.string().max(QUEST_DESCRIPTION_MAX).optional(),
   category_id: z.string().optional(),
-  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD', 'LEGENDARY']),
-  frequency: z.enum(['ONCE', 'DAILY', 'WEEKLY', 'MONTHLY']),
-  xp_reward: z.coerce.number().int().min(5).max(100),
+  difficulty: QuestDifficultySchema,
+  frequency: QuestFrequencySchema,
+  xp_reward: z.coerce.number().pipe(XpRewardSchema),
   is_active: z.boolean(),
 });
 type FormFields = z.infer<typeof questFormSchema>;
@@ -181,15 +191,15 @@ export function QuestForm({ initial, onSuccess, onCancel }: QuestFormProps) {
         </div>
         <input
           type="range"
-          min={5}
-          max={100}
+          min={XP_REWARD_MIN}
+          max={XP_REWARD_MAX}
           step={5}
           className="w-full accent-primary-500"
           {...register('xp_reward')}
         />
         <div className="flex justify-between text-xs text-surface-500">
-          <span>5</span>
-          <span>100</span>
+          <span>{XP_REWARD_MIN}</span>
+          <span>{XP_REWARD_MAX}</span>
         </div>
       </div>
 

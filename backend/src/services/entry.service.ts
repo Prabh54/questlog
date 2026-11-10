@@ -3,7 +3,7 @@ import { prisma } from '../db/prisma';
 import { AppError, Errors } from '../lib/errors';
 import { encodeCursor, decodeCursor } from '../utils/cursor';
 import { bucketBoundaries, periodKey } from '../utils/dates';
-import type { CompleteQuestBody, FeedQuery } from '../validators/entry.validators';
+import type { CompleteQuestBody, FeedQuery } from '@questlog/shared';
 import { calculateStreak } from './streak.service';
 import { levelProgress } from './xp.service';
 

@@ -2,31 +2,20 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { RegisterSchema } from '@questlog/shared';
 import { useNavigate, Link } from 'react-router-dom';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from './useAuth';
 import { ApiError } from '../../lib/api';
 
-const registerSchema = z
-  .object({
-    display_name: z
-      .string()
-      .min(3, 'At least 3 characters')
-      .max(30, 'At most 30 characters')
-      .regex(/^[a-zA-Z0-9_-]+$/, 'Letters, numbers, _ and - only'),
-    email: z.string().email('Enter a valid email'),
-    password: z
-      .string()
-      .min(8, 'At least 8 characters')
-      .regex(/[a-zA-Z]/, 'Must contain a letter')
-      .regex(/[0-9]/, 'Must contain a number'),
-    confirm_password: z.string(),
-  })
-  .refine((d) => d.password === d.confirm_password, {
-    message: 'Passwords do not match',
-    path: ['confirm_password'],
-  });
+// The API's RegisterSchema plus a client-only confirmation field
+const registerSchema = RegisterSchema.extend({
+  confirm_password: z.string(),
+}).refine((d) => d.password === d.confirm_password, {
+  message: 'Passwords do not match',
+  path: ['confirm_password'],
+});
 type RegisterFields = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
