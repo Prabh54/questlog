@@ -68,6 +68,7 @@ flowchart LR
 - **Dashboard** — today's quests, XP progress bar, 30-day completion chart, 365-day consistency heatmap, recent activity feed, top-line stats with colored accents.
 - **Analytics** — completion trend, category breakdown.
 - **History** — paginated entries with cursor-based pagination.
+- **Fast at scale:** analytics are computed in Postgres with index-only scans. On a 1.3M-completion dataset, with 20 concurrent users on a 1-vCPU API, throughput went from 18 to 252 req/s for heavy users and dashboard p95 from 8.3 s to 0.38 s. See [docs/performance.md](docs/performance.md) for the method, profiling, results and the bugs found along the way.
 - **27 REST endpoints** across auth, quests, categories, entries, dashboard, analytics — browse them at `/docs`.
 
 ## Local development
@@ -138,7 +139,8 @@ questlog/
 ├── frontend/       React app
 │   └── src/        features · components · services · lib · pages
 ├── shared/         @questlog/shared — the API contract (Zod schemas + inferred types)
-├── docs/           openapi.json (generated) · demo video
+├── bench/          load test: 1.3M-row seed, k6 scenarios, report script
+├── docs/           openapi.json (generated) · performance.md · demo video
 ├── docker-compose.dev.yml
 ├── fly.backend.toml
 └── fly.frontend.toml

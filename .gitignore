@@ -47,3 +47,6 @@ __pycache__/
 *.pyo
 .venv/
 venv/
+
+# load-test output
+bench/out/
