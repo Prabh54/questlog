@@ -10,7 +10,7 @@
  */
 import type { Router } from 'express';
 import { ZodError } from 'zod';
-import { apiRouters } from '../app';
+import { buildApiRouters } from '../app';
 import { documentedRoutes, type DocumentedRoute } from '../openapi/spec';
 import { agent } from './helpers/app';
 import { cleanDb } from './helpers/db';
@@ -29,6 +29,8 @@ interface CallOptions {
   query?: Record<string, string>;
   body?: unknown;
   token?: string;
+  cookie?: string;
+  headers?: Record<string, string>;
   expect: number;
 }
 
@@ -45,6 +47,8 @@ async function call(method: Method, template: string, opts: CallOptions) {
   let req = agent[method](url);
   if (opts.query) req = req.query(opts.query);
   if (opts.token) req = req.set('Authorization', `Bearer ${opts.token}`);
+  if (opts.cookie) req = req.set('Cookie', opts.cookie);
+  for (const [name, value] of Object.entries(opts.headers ?? {})) req = req.set(name, value);
   const res = opts.body === undefined ? await req : await req.send(opts.body as object);
 
   const status = String(res.status);
@@ -78,6 +82,15 @@ async function call(method: Method, template: string, opts: CallOptions) {
 interface Session {
   token: string;
   user: { id: string };
+  cookie: string;
+}
+
+/** "ql_refresh=abc" from a Set-Cookie response header */
+function refreshCookieOf(res: { headers: Record<string, unknown> }): string {
+  const header = res.headers['set-cookie'] as string[] | undefined;
+  const cookie = header?.find((c) => c.startsWith('ql_refresh='));
+  if (!cookie) throw new Error('response did not set the refresh cookie');
+  return cookie.split(';')[0];
 }
 
 async function register(): Promise<Session> {
@@ -86,7 +99,7 @@ async function register(): Promise<Session> {
     body: { email: `contract${ts}@test.com`, display_name: `c${ts}`, password: 'Password123' },
     expect: 201,
   });
-  return res.body as Session;
+  return { ...(res.body as Omit<Session, 'cookie'>), cookie: refreshCookieOf(res) };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────
@@ -144,7 +157,32 @@ describe('API contract (responses match the OpenAPI document)', () => {
 
     await call('get', '/auth/me', { expect: 401 });
     await call('get', '/auth/me', { token: 'not-a-jwt', expect: 401 });
-    await call('post', '/auth/logout', { token: alice.token, expect: 204 });
+  });
+
+  it('sessions: refresh, logout, logout-all and their errors', async () => {
+    // A throwaway session for alice, so her main session stays usable
+    const me = await call('get', '/auth/me', { token: alice.token, expect: 200 });
+    const login = await call('post', '/auth/login', {
+      body: { email: me.body.user.email, password: 'Password123' },
+      expect: 200,
+    });
+    const cookie = refreshCookieOf(login);
+
+    const refreshed = await call('post', '/auth/refresh', { cookie, expect: 200 });
+    await call('post', '/auth/refresh', { expect: 401 });
+    await call('post', '/auth/refresh', { cookie: 'ql_refresh=forged', expect: 401 });
+    await call('post', '/auth/refresh', {
+      cookie: refreshCookieOf(refreshed),
+      headers: { Origin: 'https://evil.example' },
+      expect: 403,
+    });
+
+    await call('post', '/auth/logout', { cookie: refreshCookieOf(refreshed), expect: 204 });
+    await call('post', '/auth/logout', { expect: 204 }); // idempotent, no cookie
+
+    const other = await register();
+    await call('post', '/auth/logout-all', { token: other.token, expect: 204 });
+    await call('post', '/auth/logout-all', { expect: 401 });
   });
 
   it('categories: create, list, update, conflicts and validation', async () => {
@@ -327,7 +365,7 @@ describe('OpenAPI document coverage', () => {
 
   function expressRoutes(): string[] {
     const keys: string[] = [routeKey('get', '/health')];
-    for (const [prefix, router] of Object.entries(apiRouters)) {
+    for (const [prefix, router] of Object.entries(buildApiRouters())) {
       for (const layer of (router as Router).stack) {
         if (!layer.route) continue;
         const path = layer.route.path === '/' ? prefix : `${prefix}${layer.route.path}`;
@@ -342,6 +380,6 @@ describe('OpenAPI document coverage', () => {
   it('documents exactly the routes Express serves', () => {
     const documented = routes.map((r) => routeKey(r.method, r.path)).sort();
     expect(documented).toEqual(expressRoutes());
-    expect(documented).toHaveLength(26); // 25 API endpoints + /health
+    expect(documented).toHaveLength(28); // 27 API endpoints + /health
   });
 });

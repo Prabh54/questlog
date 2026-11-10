@@ -27,5 +27,9 @@ export const authApi = {
   updateMe: (payload: UpdateMePayload) =>
     api.patch<UserResponse>('/auth/me', payload),
 
+  /** Ends this device's session (revokes the refresh cookie). */
   logout: () => api.post<void>('/auth/logout'),
+
+  /** Ends every session on every device. */
+  logoutAll: () => api.post<void>('/auth/logout-all'),
 };

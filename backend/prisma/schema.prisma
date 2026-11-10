@@ -50,6 +50,7 @@ model User {
   categories Category[]
   quests     Quest[]
   entries    QuestEntry[]
+  sessions   Session[]
 
   @@index([email])
   @@index([username])
@@ -121,4 +122,44 @@ model QuestEntry {
   @@index([questId, completedAt])
   @@index([userId, completedAt(sort: Desc)])
   @@map("quest_entries")
+}
+
+// ── Auth sessions ───────────────────────────────────────────────────────────
+// A Session is one login on one device: a family of rotating refresh tokens.
+// Logout, "log out everywhere" and refresh-token reuse all revoke the session,
+// which invalidates every token in the family.
+model Session {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  // Absolute lifetime: rotation never extends a session past this
+  expiresAt     DateTime  @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+  // LOGOUT | LOGOUT_ALL | REUSE_DETECTED
+  revokedReason String?   @map("revoked_reason")
+  userAgent     String?   @map("user_agent")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  lastUsedAt    DateTime  @default(now()) @map("last_used_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// Only a SHA-256 hash of each refresh token is stored. A token is single-use:
+// presenting one whose usedAt is set means it was stolen or replayed.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  sessionId String    @map("session_id")
+  tokenHash String    @unique @map("token_hash")
+  // Idle timeout: the session dies if not refreshed before this
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("refresh_tokens")
 }

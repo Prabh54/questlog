@@ -9,7 +9,11 @@ primary_region = 'iad'
 [build]
   dockerfile = 'frontend/Dockerfile'
   [build.args]
-    VITE_API_URL = 'https://questlog-api-snowy-seastar-7669.fly.dev'
+    VITE_API_URL = '/api'
+
+# nginx proxies /api/* here (PROXY_SECRET is a Fly secret shared with the API)
+[env]
+  API_UPSTREAM = 'https://questlog-api-snowy-seastar-7669.fly.dev'
 
 [http_service]
   internal_port = 80
