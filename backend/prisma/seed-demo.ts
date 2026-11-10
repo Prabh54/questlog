@@ -1,6 +1,6 @@
 /**
  * Demo-account seed — creates demo@questlog.app / questdemo123 on any DB
- * and populates it with 90 days of realistic quest data.
+ * and populates it with a year of realistic quest data (DEMO_HISTORY_DAYS to change).
  *
  * Local:      DATABASE_URL=<local_url> npx ts-node prisma/seed-demo.ts
  * Production: flyctl proxy 15432:5432 -a <pg-app>  (in another terminal)
@@ -85,7 +85,9 @@ async function main() {
     completedDays: (totalDays: number) => number[];
   };
 
-  const HISTORY_DAYS = 90;
+  // A full year fills the dashboard's 365-day consistency heatmap
+  const HISTORY_DAYS = Number(process.env.DEMO_HISTORY_DAYS ?? 365);
+  const WEEKS = Math.floor(HISTORY_DAYS / 7);
 
   const questDefs: QuestDef[] = [
     {
@@ -160,10 +162,11 @@ async function main() {
       difficulty: 'MEDIUM',
       frequency: 'DAILY',
       xpReward: 25,
-      // 60-day streak then abandoned (shows heatmap gap)
+      // Strong for months, a 60-day streak, then dropped 9 days ago
       completedDays: (n) => {
         const days: number[] = [];
         for (let d = 9; d < 9 + 60 && d < n; d++) days.push(d);
+        for (let d = 69; d < n; d++) { if (rng() < 0.55) days.push(d); }
         return days;
       },
     },
@@ -173,11 +176,11 @@ async function main() {
       difficulty: 'EASY',
       frequency: 'WEEKLY',
       xpReward: 20,
-      // 10 of 12 weeks
+      // ~85% of weeks
       completedDays: () => {
-        const skip = pickDistinct(2, 12);
+        const skip = pickDistinct(Math.round(WEEKS * 0.15), WEEKS);
         const days: number[] = [];
-        for (let w = 0; w < 12; w++) {
+        for (let w = 0; w < WEEKS; w++) {
           if (!skip.has(w)) days.push(w * 7 + Math.floor(rng() * 7));
         }
         return days;
@@ -189,11 +192,11 @@ async function main() {
       difficulty: 'HARD',
       frequency: 'WEEKLY',
       xpReward: 50,
-      // 6 of 12 weeks
+      // ~half the weeks
       completedDays: () => {
-        const skip = pickDistinct(6, 12);
+        const skip = pickDistinct(Math.round(WEEKS * 0.5), WEEKS);
         const days: number[] = [];
-        for (let w = 0; w < 12; w++) {
+        for (let w = 0; w < WEEKS; w++) {
           if (!skip.has(w)) days.push(w * 7 + Math.floor(rng() * 7));
         }
         return days;

@@ -1,11 +1,20 @@
 # QuestLog
 
-A gamified habit tracker. Turn daily routines into quests, earn XP, level up, build streaks, and watch a year-long consistency heatmap fill in.
+[![CI](https://github.com/Prabh54/questlog/actions/workflows/ci.yml/badge.svg)](https://github.com/Prabh54/questlog/actions/workflows/ci.yml)
 
-**Live demo:** https://questlog-web.fly.dev  ·  log in with `demo@questlog.app` / `questdemo123`
-**API:** https://questlog-api-snowy-seastar-7669.fly.dev
+A gamified habit tracker. Turn daily routines into quests, earn XP, level up, build streaks, and watch a year-long consistency heatmap fill in. Full-stack TypeScript (React · Express · PostgreSQL), deployed on Fly.io.
 
-https://github.com/user-attachments/assets/9e326a3e-7f24-4c81-96be-22ceffa285be
+**[Live demo](https://questlog-web.fly.dev)** (log in with `demo@questlog.app` / `questdemo123`) · **[API docs](https://questlog-api-snowy-seastar-7669.fly.dev/docs)** · **[Performance write-up](docs/performance.md)**
+
+![QuestLog demo: log in, complete a quest, the year-long heatmap, quest detail and analytics](docs/demo.gif)
+
+## Highlights
+
+- **14× throughput from profiling, not guessing.** I load-tested with k6 on 1.3M completions against a 1-vCPU API and found Node, not Postgres, was the bottleneck. Moving analytics into SQL (window-function streaks, index-only scans) took heavy users from **18 → 252 req/s** and dashboard **p95 from 8.3 s → 0.38 s**. Differential tests across 7 timezones prove the SQL matches the original logic, and they caught a Postgres/Node timezone-data mismatch. [Details →](docs/performance.md)
+- **Auth built to survive token theft.** 15-minute in-memory access tokens. Rotating, hashed refresh tokens in `HttpOnly; SameSite=Strict` cookies, with **reuse detection** that revokes the session; it's race-safe under concurrent refreshes. Per-IP and per-account rate limits. [Design →](#authentication)
+- **One API contract.** Shared Zod schemas validate requests, type the React client and **generate the OpenAPI docs**. Contract tests check all 27 endpoints against them. [How →](#architecture)
+- **Correct under concurrency.** Completing a quest is race-safe: a unique `(quest, period)` index means 5 parallel requests produce exactly one completion.
+- **142 automated tests** (Jest + Supertest against real Postgres, Vitest + React Testing Library), with ~90% backend coverage, in a 3-job GitHub Actions pipeline.
 
 ---
 
@@ -65,8 +74,10 @@ flowchart LR
 - **Quests** — create daily / weekly / monthly / one-time goals, assign categories, set difficulty (Easy → Legendary) and XP reward (5–100).
 - **XP + levels** — completions award XP; reaching level *n* takes `50·n·(n−1)` total XP, so `level = floor((1 + √(1 + xp/12.5)) / 2)`. XP is never stored — it's summed from the completion log.
 - **Streaks** — current and best per-quest, computed from the entries log.
-- **Dashboard** — today's quests, XP progress bar, 30-day completion chart, 365-day consistency heatmap, recent activity feed, top-line stats with colored accents.
-- **Analytics** — completion trend, category breakdown.
+- **Dashboard** — today's quests, XP progress bar, 30-day completion chart, 365-day consistency heatmap, recent activity feed, top-line stats.
+- **Quest detail** — current and best streak, total completions, per-quest heatmap, completion history with undo.
+- **Analytics** — completion trend, XP over time, category breakdown, top streaks.
+- **Sessions** — "Sign out of all devices" on the profile page.
 - **History** — paginated entries with cursor-based pagination.
 - **Fast at scale:** analytics are computed in Postgres with index-only scans. On a 1.3M-completion dataset, with 20 concurrent users on a 1-vCPU API, throughput went from 18 to 252 req/s for heavy users and dashboard p95 from 8.3 s to 0.38 s. See [docs/performance.md](docs/performance.md) for the method, profiling, results and the bugs found along the way.
 - **27 REST endpoints** across auth, quests, categories, entries, dashboard, analytics — browse them at `/docs`.
@@ -80,7 +91,7 @@ cd questlog
 docker compose -f docker-compose.dev.yml up
 ```
 
-Then open http://localhost:5173 and register an account. First boot is slow (~60s — each container does `npm install`); restarts are fast (deps cached in named volumes).
+Then open http://localhost:5173 and register an account. First boot is slow (~60s while each container runs `npm ci`); restarts are fast, because dependencies are cached in named volumes and reinstalled only when `package-lock.json` changes.
 
 ### Seed demo data
 
@@ -88,10 +99,12 @@ Then open http://localhost:5173 and register an account. First boot is slow (~60
 cd backend
 npm install
 npx prisma generate
-npm run db:seed
+npm run db:seed-demo
 ```
 
-The seed populates the user `harpreet@gmail.com` with 4 categories, 8 quests, and 90 days of realistic entries (varied completion patterns, streaks, abandoned quests, weekly cadences). It throws if the user doesn't exist — register first.
+Creates (or resets) `demo@questlog.app` / `questdemo123` with 4 categories, 8 quests and **a year** of realistic completions: streaks, an abandoned quest, weekly cadences, and an improving habit (~1,500 entries, level 25). Set `DEMO_HISTORY_DAYS` to change the length. The demo GIF above was recorded against this data.
+
+For load testing there is a separate 1.3M-row dataset in [`bench/`](bench).
 
 ### Run tests
 
