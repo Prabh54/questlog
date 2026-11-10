@@ -1,15 +1,11 @@
 import { Search } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Input } from '../../components/ui/Input';
-import type {
-  Category,
-  Difficulty,
-  QuestFiltersQuery,
-  QuestStatus,
-} from '../../services/quests.api';
+import { QuestDifficultySchema, QuestStatusSchema } from '@questlog/shared';
+import type { Category, QuestFiltersQuery } from '../../services/quests.api';
 
-const DIFFICULTIES: Difficulty[] = ['EASY', 'MEDIUM', 'HARD', 'LEGENDARY'];
-const STATUSES: QuestStatus[] = ['ACTIVE', 'PAUSED', 'COMPLETED', 'ARCHIVED'];
+const DIFFICULTIES = QuestDifficultySchema.options;
+const STATUSES = QuestStatusSchema.options;
 const SORTS = [
   { value: 'newest', label: 'Newest' },
   { value: 'oldest', label: 'Oldest' },

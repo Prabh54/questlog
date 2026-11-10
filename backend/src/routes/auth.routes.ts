@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { validate } from '../middleware/validate.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
-import { RegisterSchema, LoginSchema } from '../validators/auth.validators';
-import { UpdateMeSchema } from '../validators/user.validators';
+import { LoginSchema, RegisterSchema, UpdateMeSchema } from '@questlog/shared';
 import * as authController from '../controllers/auth.controller';
 
 const router = Router();

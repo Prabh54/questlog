@@ -4,7 +4,7 @@ import { AppError, Errors } from '../lib/errors';
 import type {
   CreateCategoryBody,
   UpdateCategoryBody,
-} from '../validators/category.validators';
+} from '@questlog/shared';
 
 export async function listCategories(userId: string) {
   return prisma.category.findMany({

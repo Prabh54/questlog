@@ -7,7 +7,7 @@ import type {
   CreateQuestBody,
   ListQuestsQuery,
   UpdateQuestBody,
-} from '../validators/quest.validators';
+} from '@questlog/shared';
 
 // ── Shape returned to the client ─────────────────────────────────────────
 type StripDay = { date: string; completed: boolean };

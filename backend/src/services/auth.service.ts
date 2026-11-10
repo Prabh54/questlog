@@ -3,8 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../db/prisma';
 import { env } from '../config/env';
 import { AppError, Errors } from '../lib/errors';
-import type { RegisterBody, LoginBody } from '../validators/auth.validators';
-import type { UpdateMeBody } from '../validators/user.validators';
+import type { LoginBody, RegisterBody, UpdateMeBody } from '@questlog/shared';
 import { getUserTotalXp } from './entry.service';
 import { levelProgress } from './xp.service';
 

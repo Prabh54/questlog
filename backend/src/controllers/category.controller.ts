@@ -3,7 +3,7 @@ import * as categoryService from '../services/category.service';
 import type {
   CreateCategoryBody,
   UpdateCategoryBody,
-} from '../validators/category.validators';
+} from '@questlog/shared';
 
 export const list = async (req: Request, res: Response, next: NextFunction) => {
   try {

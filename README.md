@@ -17,7 +17,8 @@ https://github.com/user-attachments/assets/9e326a3e-7f24-4c81-96be-22ceffa285be
 | Backend | Node 20, Express, TypeScript, Prisma ORM, Zod validators |
 | Database | PostgreSQL 16 |
 | Auth | JWT (HS256), bcryptjs password hashing |
-| Shared | `@questlog/shared` workspace — Zod schemas reused on both sides |
+| Shared | `@questlog/shared` workspace — Zod schemas for requests *and* responses, built as ESM + CJS with tsup |
+| API docs | OpenAPI 3 generated from those schemas (`@asteasolutions/zod-to-openapi`), Swagger UI at `/docs` |
 | Infra | Docker, Fly.io (3 apps: web + api + managed Postgres) |
 | CI | GitHub Actions — lint, typecheck, unit + integration tests |
 
@@ -46,17 +47,22 @@ flowchart LR
 
 **Request flow:** Browser sends `Authorization: Bearer <jwt>` → Express verifies the token, validates the request body against a Zod schema, checks the authenticated user owns the target row, then delegates to a service which calls Prisma.
 
-**Why a shared package:** the same Zod schemas validate the API request on the server and the form fields on the client, so the two can never drift.
+**The API contract lives in one place.** `@questlog/shared` holds a Zod schema for every request body, query string and response:
+
+- the API's `validate()` middleware parses bodies and query strings with them (bad input → `400 VALIDATION_FAILED` with per-field errors);
+- the web app's forms use the same rules (extended only with UI concerns like "confirm password"), and its API client is typed from the inferred response types;
+- the OpenAPI document at [`/docs`](https://questlog-api-snowy-seastar-7669.fly.dev/docs) and [`docs/openapi.json`](docs/openapi.json) is generated from them;
+- **contract tests** call all 25 endpoints against a real Postgres and parse every response with its documented schema (response schemas are `.strict()`, so a missing *or* extra field fails), assert that every documented operation was exercised, and assert that Express and the document list exactly the same routes. CI also fails if `docs/openapi.json` is stale.
 
 ## Features
 
 - **Quests** — create daily / weekly / monthly / one-time goals, assign categories, set difficulty (Easy → Legendary) and XP reward (5–100).
-- **XP + levels** — completions award XP; level curve is `floor(1 + sqrt(totalXP / 50))`.
+- **XP + levels** — completions award XP; reaching level *n* takes `50·n·(n−1)` total XP, so `level = floor((1 + √(1 + xp/12.5)) / 2)`. XP is never stored — it's summed from the completion log.
 - **Streaks** — current and best per-quest, computed from the entries log.
 - **Dashboard** — today's quests, XP progress bar, 30-day completion chart, 365-day consistency heatmap, recent activity feed, top-line stats with colored accents.
 - **Analytics** — completion trend, category breakdown.
 - **History** — paginated entries with cursor-based pagination.
-- **25 REST endpoints** across auth, quests, categories, entries, dashboard, analytics.
+- **25 REST endpoints** across auth, quests, categories, entries, dashboard, analytics — browse them at `/docs`.
 
 ## Local development
 
@@ -82,10 +88,15 @@ The seed populates the user `harpreet@gmail.com` with 4 categories, 8 quests, an
 
 ### Run tests
 
+Build the shared contract package once first (`npm run dev -w @questlog/shared` rebuilds it on change):
+
 ```bash
+npm run build --workspace=@questlog/shared
 npm run --workspace=@questlog/backend test
 npm run --workspace=@questlog/frontend test
 ```
+
+After changing a schema or route, regenerate the API spec: `npm run openapi --workspace=@questlog/backend`.
 
 ## Environment variables
 
@@ -116,7 +127,8 @@ questlog/
 │   └── src/        controllers · services · routes · middleware · validators
 ├── frontend/       React app
 │   └── src/        features · components · services · lib · pages
-├── shared/         @questlog/shared — Zod schemas used by both sides
+├── shared/         @questlog/shared — the API contract (Zod schemas + inferred types)
+├── docs/           openapi.json (generated) · demo video
 ├── docker-compose.dev.yml
 ├── fly.backend.toml
 └── fly.frontend.toml
@@ -137,10 +149,11 @@ flyctl deploy --config fly.frontend.toml
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push:
 
-- Lint (ESLint) — backend, frontend, shared
-- Typecheck (`tsc --noEmit`) — backend, frontend, shared
-- Unit tests (Jest) — backend services
-- Integration tests (Jest + supertest + real Postgres) — backend API routes
+- Lint (ESLint) — backend, frontend
+- Typecheck (`tsc --noEmit`) — backend, frontend, shared; build of the shared package (ESM + CJS + types)
+- OpenAPI drift check — regenerates `docs/openapi.json` and fails if it changed
+- Unit tests (Jest) — streak, XP and cursor logic
+- Integration + contract tests (Jest + supertest + real Postgres) — every endpoint, concurrency, ownership isolation
 - Component tests (Vitest + React Testing Library) — frontend
 
 ## License

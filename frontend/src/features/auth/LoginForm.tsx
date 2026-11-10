@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import type { z } from 'zod';
+import { LoginSchema } from '@questlog/shared';
 import { useNavigate, Link } from 'react-router-dom';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from './useAuth';
 import { ApiError } from '../../lib/api';
 
-const loginSchema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(1, 'Password is required'),
-});
+// Same schema the API validates POST /auth/login with
+const loginSchema = LoginSchema;
 type LoginFields = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
