@@ -120,7 +120,11 @@ model QuestEntry {
   @@unique([questId, periodKey])
   @@index([questId])
   @@index([questId, completedAt])
-  @@index([userId, completedAt(sort: Desc)])
+  // Covering index: the per-user aggregates in src/services/stats.queries.ts
+  // (streaks, time series, category and XP totals) read only these columns,
+  // so Postgres answers them with index-only scans. The (user_id, completed_at)
+  // prefix still serves the feed's keyset pagination.
+  @@index([userId, completedAt(sort: Desc), questId, xpEarned])
   @@map("quest_entries")
 }
 
